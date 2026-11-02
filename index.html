@@ -1,0 +1,3596 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>STAR INVADER 3D - Tactical Aerospace Simulation</title>
+    <!-- Three.js: Local bundled copy with robust CDN fallback -->
+    <script src="three.min.js"></script>
+    <script>
+      if (typeof THREE === "undefined") {
+        document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+      }
+    </script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      body {
+        background-color: #02040a;
+        color: #e0e6ed;
+        font-family:
+          "Segoe UI",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Roboto",
+          sans-serif;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+      }
+
+      #game-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        max-width: 100vw;
+        max-height: 100vh;
+        background: #010308;
+        overflow: hidden;
+      }
+
+      /* 3D WebGL Canvas */
+      #webglCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        z-index: 1;
+      }
+
+      /* 2D Cockpit HUD Overlay Canvas */
+      #hudCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      /* UI Overlays */
+      .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(180deg, rgba(2, 6, 16, 0.94) 0%, rgba(5, 14, 32, 0.96) 60%, rgba(8, 18, 40, 0.95) 100%);
+        z-index: 10;
+        padding: 24px;
+        transition: opacity 0.25s ease;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      /* Tactical Header Banner */
+      .title-banner {
+        text-align: center;
+        margin-bottom: 16px;
+      }
+
+      .sys-pre-title {
+        font-size: 11px;
+        letter-spacing: 3.5px;
+        color: #00e5ff;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 4px;
+        opacity: 0.9;
+      }
+
+      .main-game-title {
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: 4px;
+        color: #ffffff;
+        text-transform: uppercase;
+        text-shadow: 0 0 15px rgba(0, 229, 255, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      .title-badge {
+        font-size: 11px;
+        font-weight: 700;
+        color: #00e5ff;
+        background: rgba(0, 229, 255, 0.12);
+        border: 1px solid rgba(0, 229, 255, 0.5);
+        padding: 3px 8px;
+        border-radius: 4px;
+        letter-spacing: 1.5px;
+      }
+
+      .sys-sub-status {
+        font-size: 11px;
+        letter-spacing: 2.5px;
+        color: #78909c;
+        margin-top: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .live-dot {
+        width: 7px;
+        height: 7px;
+        background-color: #00e676;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 8px #00e676;
+      }
+
+      /* Main Hangar Layout */
+      .hangar-box {
+        display: flex;
+        gap: 22px;
+        max-width: 1140px;
+        width: 94%;
+        margin-bottom: 20px;
+      }
+
+      .hangar-card {
+        background: rgba(6, 16, 36, 0.88);
+        border: 1.2px solid rgba(0, 229, 255, 0.4);
+        border-radius: 10px;
+        padding: 18px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+      }
+
+      .card-header-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+        padding-bottom: 8px;
+      }
+
+      .card-header-title {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: #80d8ff;
+        text-transform: uppercase;
+      }
+
+      .card-id-tag {
+        font-size: 10px;
+        color: #00e5ff;
+        background: rgba(0, 229, 255, 0.15);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+
+      .left-dock {
+        flex: 1.05;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #turntableCanvas {
+        width: 100%;
+        max-width: 440px;
+        height: 280px;
+        border-radius: 6px;
+        background: radial-gradient(circle at center, rgba(0, 100, 200, 0.12) 0%, rgba(2, 6, 16, 0.85) 75%);
+        border: 1px solid rgba(0, 229, 255, 0.3);
+        margin-bottom: 12px;
+      }
+
+      .ship-switcher {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        background: rgba(0, 25, 55, 0.6);
+        border-radius: 6px;
+        padding: 6px 12px;
+        border: 1px solid rgba(0, 229, 255, 0.3);
+      }
+
+      .nav-btn {
+        background: rgba(0, 229, 255, 0.12);
+        border: 1px solid rgba(0, 229, 255, 0.5);
+        color: #00e5ff;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 1px;
+      }
+
+      .nav-btn:hover {
+        background: #00e5ff;
+        color: #020817;
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+      }
+
+      #ship-name {
+        font-size: 15px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
+      .right-specs {
+        flex: 1.25;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .callsign-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(2, 10, 26, 0.7);
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 229, 255, 0.25);
+      }
+
+      .callsign-box label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #80d8ff;
+        letter-spacing: 1.5px;
+      }
+
+      .callsign-box input {
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #ffd600;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        flex: 1;
+        text-transform: uppercase;
+      }
+
+      #ship-desc {
+        font-size: 12px;
+        line-height: 1.5;
+        color: #90a4ae;
+        background: rgba(0, 5, 15, 0.4);
+        padding: 8px 12px;
+        border-radius: 5px;
+        border-left: 3px solid #00e5ff;
+        min-height: 48px;
+      }
+
+      .stats-container {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .stat-row {
+        display: flex;
+        align-items: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #80d8ff;
+        letter-spacing: 1px;
+      }
+
+      .stat-row span:first-child {
+        width: 120px;
+      }
+
+      .stat-bar-outer {
+        flex: 1;
+        height: 8px;
+        background: rgba(0, 15, 35, 0.8);
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid rgba(0, 229, 255, 0.25);
+        margin: 0 10px;
+      }
+
+      .stat-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+      }
+
+      .stat-row span:last-child {
+        width: 38px;
+        text-align: right;
+        color: #ffd600;
+        font-family: monospace;
+        font-size: 11px;
+      }
+
+      /* Companion Modules */
+      .drone-section-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #80d8ff;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+
+      .drone-cards-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .drone-card {
+        background: rgba(2, 12, 30, 0.7);
+        border: 1.2px solid rgba(0, 229, 255, 0.25);
+        border-radius: 6px;
+        padding: 8px 6px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .drone-card:hover {
+        border-color: #00e5ff;
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+        transform: translateY(-2px);
+      }
+
+      .drone-card.selected {
+        border-color: #ffd600;
+        background: rgba(255, 214, 0, 0.08);
+        box-shadow: 0 0 12px rgba(255, 214, 0, 0.35);
+      }
+
+      .drone-card .code {
+        font-size: 9px;
+        font-family: monospace;
+        color: #00e5ff;
+        margin-bottom: 2px;
+      }
+
+      .drone-card .title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: 1px;
+        margin-bottom: 2px;
+      }
+
+      .drone-card .perk {
+        font-size: 9px;
+        color: #90a4ae;
+      }
+
+      /* Bottom Action Bar */
+      .button-bar {
+        display: flex;
+        gap: 12px;
+        width: 94%;
+        max-width: 1140px;
+      }
+
+      .cyber-btn {
+        flex: 1;
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        border: 1.2px solid;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .btn-launch {
+        background: linear-gradient(135deg, #0091ea, #00e5ff);
+        color: #020817;
+        border-color: #00e5ff;
+        box-shadow: 0 0 18px rgba(0, 229, 255, 0.45);
+        flex: 1.6;
+        font-size: 14px;
+      }
+
+      .btn-launch:hover {
+        background: linear-gradient(135deg, #00e5ff, #80d8ff);
+        box-shadow: 0 0 28px rgba(0, 229, 255, 0.8);
+        transform: scale(1.02);
+      }
+
+      .btn-leader {
+        background: rgba(255, 214, 0, 0.08);
+        color: #ffd600;
+        border-color: rgba(255, 214, 0, 0.5);
+      }
+
+      .btn-leader:hover {
+        background: #ffd600;
+        color: #020817;
+        box-shadow: 0 0 15px rgba(255, 214, 0, 0.6);
+      }
+
+      .btn-guide {
+        background: rgba(0, 229, 255, 0.08);
+        color: #80d8ff;
+        border-color: rgba(0, 229, 255, 0.4);
+      }
+
+      .btn-guide:hover {
+        background: #00e5ff;
+        color: #020817;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+      }
+
+      .btn-audio {
+        background: rgba(213, 0, 249, 0.08);
+        color: #e040fb;
+        border-color: rgba(213, 0, 249, 0.4);
+        flex: 0.9;
+      }
+
+      .btn-audio:hover {
+        background: #d500f9;
+        color: #ffffff;
+        box-shadow: 0 0 15px rgba(213, 0, 249, 0.6);
+      }
+
+      .btn-fullscreen {
+        background: rgba(0, 230, 118, 0.08);
+        color: #00e676;
+        border-color: rgba(0, 230, 118, 0.4);
+        flex: 0.95;
+      }
+
+      .btn-fullscreen:hover {
+        background: #00e676;
+        color: #020817;
+        box-shadow: 0 0 15px rgba(0, 230, 118, 0.6);
+      }
+
+      #quick-top-nav {
+        position: absolute;
+        top: 14px;
+        right: 18px;
+        z-index: 100;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .quick-nav-btn {
+        background: rgba(3, 12, 30, 0.78);
+        border: 1.2px solid rgba(0, 229, 255, 0.45);
+        color: #00e5ff;
+        font-size: 13px;
+        padding: 7px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      }
+
+      .quick-nav-btn:hover {
+        background: #00e5ff;
+        color: #020817;
+        box-shadow: 0 0 16px rgba(0, 229, 255, 0.75);
+        transform: translateY(-1px);
+      }
+
+      .quick-leader-btn {
+        border-color: rgba(255, 214, 0, 0.6);
+        color: #ffd600;
+        background: rgba(20, 15, 2, 0.78);
+      }
+
+      .quick-leader-btn:hover {
+        background: #ffd600;
+        color: #020817;
+        box-shadow: 0 0 16px rgba(255, 214, 0, 0.85);
+      }
+
+      /* Modal Dialogs */
+      .modal {
+        background: rgba(4, 12, 28, 0.96);
+        border: 1.5px solid rgba(0, 229, 255, 0.6);
+        border-radius: 10px;
+        padding: 24px 30px;
+        max-width: 620px;
+        width: 90%;
+        box-shadow: 0 0 35px rgba(0, 0, 0, 0.85);
+        text-align: center;
+      }
+
+      .modal-title {
+        color: #ffffff;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 3px;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(0, 229, 255, 0.3);
+        padding-bottom: 8px;
+      }
+
+      .leader-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 12px;
+      }
+
+      .leader-table th {
+        background: rgba(0, 229, 255, 0.12);
+        color: #00e5ff;
+        padding: 8px;
+        border-bottom: 1.5px solid rgba(0, 229, 255, 0.4);
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+      }
+
+      .leader-table td {
+        padding: 8px;
+        border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+        color: #b0bec5;
+      }
+
+      .leader-table tr:nth-child(even) {
+        background: rgba(0, 229, 255, 0.03);
+      }
+
+      .leader-table tr.recent-entry-row {
+        background: rgba(0, 229, 255, 0.22) !important;
+        border-left: 3px solid #00e5ff;
+        box-shadow: inset 0 0 12px rgba(0, 229, 255, 0.25);
+      }
+
+      .leader-table tr.recent-entry-row td {
+        color: #ffffff !important;
+        font-weight: 800;
+      }
+
+      /* Touch Controls */
+      #touch-controls {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        z-index: 5;
+        pointer-events: none;
+      }
+
+      .touch-group {
+        display: flex;
+        gap: 10px;
+        pointer-events: auto;
+      }
+
+      .t-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 6px;
+        background: rgba(0, 229, 255, 0.15);
+        border: 1.5px solid rgba(0, 229, 255, 0.5);
+        color: #00e5ff;
+        font-size: 16px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+      }
+
+      .t-btn:active {
+        background: #00e5ff;
+        color: #000000;
+      }
+
+      .t-btn-fire {
+        width: 70px;
+        height: 70px;
+        background: rgba(255, 23, 68, 0.25);
+        border-color: #ff1744;
+        box-shadow: 0 0 12px rgba(255, 23, 68, 0.4);
+      }
+
+      .t-btn-fire:active {
+        background: #ff1744;
+        color: #ffffff;
+      }
+
+      /* Pilot Registration Modal Styles */
+      .pilot-input-modal {
+        max-width: 480px;
+      }
+
+      .pilot-form-group {
+        background: rgba(3, 10, 26, 0.75);
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 229, 255, 0.3);
+        text-align: left;
+      }
+
+      .cyber-input {
+        width: 100%;
+        box-sizing: border-box;
+        background: rgba(2, 12, 32, 0.9);
+        border: 1.8px solid rgba(0, 229, 255, 0.5);
+        border-radius: 6px;
+        padding: 12px 14px;
+        font-size: 16px;
+        font-weight: 800;
+        color: #ffd600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        outline: none;
+        transition: all 0.25s ease;
+        box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.15);
+      }
+
+      .cyber-input::placeholder {
+        color: rgba(144, 164, 174, 0.55);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1px;
+      }
+
+      .cyber-input:focus {
+        border-color: #00e5ff;
+        box-shadow:
+          0 0 18px rgba(0, 229, 255, 0.5),
+          inset 0 0 12px rgba(0, 229, 255, 0.25);
+        background: rgba(4, 18, 48, 0.95);
+      }
+
+      .input-error-msg {
+        color: #ff1744;
+        font-size: 12px;
+        font-weight: 700;
+        margin-top: 8px;
+        letter-spacing: 0.5px;
+      }
+
+      @keyframes shake-input {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20%,
+        60% {
+          transform: translateX(-8px);
+        }
+        40%,
+        80% {
+          transform: translateX(8px);
+        }
+      }
+
+      .shake {
+        animation: shake-input 0.35s ease-in-out;
+        border-color: #ff1744 !important;
+        box-shadow: 0 0 16px rgba(255, 23, 68, 0.6) !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <!-- Quick Top Navigation Buttons -->
+      <div id="quick-top-nav">
+        <button id="quick-leaderboard-btn" class="quick-nav-btn quick-leader-btn" title="Buka Papan Peringkat (Tekan L)">🏆 LEADERBOARD</button>
+        <button id="quick-fullscreen-btn" class="quick-nav-btn" title="Alihkan Layar Penuh">⛶ LAYAR PENUH</button>
+      </div>
+
+      <!-- Real Hardware Accelerated Three.js 3D Viewport -->
+      <canvas id="webglCanvas"></canvas>
+
+      <!-- Glassmorphic Cockpit Telemetry HUD Overlay -->
+      <canvas id="hudCanvas"></canvas>
+
+      <!-- Mobile Touch Controls -->
+      <div id="touch-controls" class="hidden">
+        <div class="touch-group">
+          <div class="t-btn" id="btn-left">KIRI</div>
+          <div class="t-btn" id="btn-fwd">MAJU</div>
+          <div class="t-btn" id="btn-bwd">MUNDUR</div>
+          <div class="t-btn" id="btn-right">KANAN</div>
+        </div>
+        <div class="touch-group">
+          <div class="t-btn t-btn-fire" id="btn-fire">TEMBAK</div>
+        </div>
+      </div>
+
+      <!-- HANGAR DOCK MENU OVERLAY -->
+      <div id="hangar-overlay" class="overlay">
+        <div class="title-banner">
+          <div class="sys-pre-title">INISIASI PERTAHANAN PLANET BERSATU // SAYAP ORBITAL</div>
+          <h1 class="main-game-title">STAR INVADER <span class="title-badge">DIRGANTARA TAKTIS</span></h1>
+          <div class="sys-sub-status"><span class="live-dot"></span> SISTEM TAKTIS: ONLINE // MATRIKS WARP SIAP</div>
+        </div>
+
+        <div class="hangar-box">
+          <!-- Left 3D Real-time Turntable Dock -->
+          <div class="hangar-card left-dock">
+            <div class="card-header-bar" style="width: 100%">
+              <span class="card-header-title">DOK INSPEKSI PESAWAT</span>
+              <span class="card-id-tag">DOK-01</span>
+            </div>
+            <canvas id="turntableCanvas"></canvas>
+            <div class="ship-switcher">
+              <button class="nav-btn" id="prev-ship-btn">SEBELUM</button>
+              <div id="ship-name">FALCON X-1</div>
+              <button class="nav-btn" id="next-ship-btn">LANJUT</button>
+            </div>
+          </div>
+
+          <!-- Right Pilot Specs & Drones -->
+          <div class="hangar-card right-specs">
+            <div class="card-header-bar">
+              <span class="card-header-title">SPESIFIKASI TAKTIS</span>
+              <span class="card-id-tag">PROFIL RANGKA</span>
+            </div>
+
+            <div class="callsign-box">
+              <label>CALLSIGN PILOT:</label>
+              <input type="text" id="pilot-name" placeholder="MASUKKAN NAMA..." maxlength="14" spellcheck="false" />
+            </div>
+
+            <div id="ship-desc">Pesawat tempur taktis dengan sayap inverted-gull, bodi komposit titanium anti-radar, dan pendorong plasma tri-vektor.</div>
+
+            <div class="stats-container">
+              <div class="stat-row">
+                <span>KECEPATAN WARP</span>
+                <div class="stat-bar-outer"><div class="stat-bar-fill" id="speed-bar" style="width: 88%; background: #00e5ff"></div></div>
+                <span id="speed-val">88%</span>
+              </div>
+              <div class="stat-row">
+                <span>KELINCAHAN TEMPUR</span>
+                <div class="stat-bar-outer"><div class="stat-bar-fill" id="handle-bar" style="width: 85%; background: #ffd600"></div></div>
+                <span id="handle-val">85%</span>
+              </div>
+              <div class="stat-row">
+                <span>GRAVITASI TRAKTOR</span>
+                <div class="stat-bar-outer"><div class="stat-bar-fill" id="magnet-bar" style="width: 40%; background: #d500f9"></div></div>
+                <span id="magnet-val">40%</span>
+              </div>
+            </div>
+
+            <div class="drone-section-label">MODUL DRONE TAKTIS:</div>
+
+            <div class="drone-cards-container">
+              <div class="drone-card selected" data-drone="MAGNET">
+                <div class="code">MOD-01</div>
+                <div class="title">TRAKTOR</div>
+                <div class="perk">+35% Radius Sedot</div>
+              </div>
+              <div class="drone-card" data-drone="SHIELD">
+                <div class="code">MOD-02</div>
+                <div class="title">AEGIS</div>
+                <div class="perk">Perisai Kinetik</div>
+              </div>
+              <div class="drone-card" data-drone="BLASTER">
+                <div class="code">MOD-03</div>
+                <div class="title">PULSA</div>
+                <div class="perk">Meriam Plasma Ganda</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-bar">
+          <button class="cyber-btn btn-launch" id="btn-launch-game">MULAI OPERASI</button>
+          <button class="cyber-btn btn-leader" id="btn-open-leaderboard">🏆 LEADERBOARD</button>
+          <button class="cyber-btn btn-guide" id="btn-open-guide">PROTOKOL TERBANG</button>
+          <button class="cyber-btn btn-audio" id="btn-toggle-audio">AUDIO KOMUNIKASI: AKTIF</button>
+          <button class="cyber-btn btn-fullscreen" id="btn-fullscreen">⛶ LAYAR PENUH</button>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD OVERLAY -->
+      <div id="leaderboard-overlay" class="overlay hidden">
+        <div class="modal" style="max-width: 740px">
+          <div class="modal-title">REKOR OPERASIONAL ARMADA // PAPAN PERINGKAT</div>
+          <div id="sheets-sync-status" style="font-size: 11px; font-weight: 700; letter-spacing: 1.2px; color: #00e5ff; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px">
+            <span class="live-dot"></span> SINKRONISASI CLOUD SPREADSHEET AKTIF
+          </div>
+          <div style="max-height: 340px; overflow-y: auto; margin-bottom: 18px; border-radius: 6px; border: 1px solid rgba(0, 229, 255, 0.2)">
+            <table class="leader-table" style="margin-bottom: 0">
+              <thead>
+                <tr>
+                  <th>PERINGKAT</th>
+                  <th>CALLSIGN PILOT</th>
+                  <th>PESAWAT</th>
+                  <th>GALON</th>
+                  <th>SKOR AKHIR</th>
+                  <th>WAKTU</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body"></tbody>
+            </table>
+          </div>
+          <div class="button-bar" style="justify-content: center; gap: 12px; flex-wrap: wrap">
+            <button class="cyber-btn btn-launch" id="btn-refresh-leaderboard">🔄 SINKRONKAN DATA</button>
+            <a href="leaderboard.html" target="_blank" class="cyber-btn" id="btn-external-leaderboard" style="text-decoration: none; display: flex; align-items: center; gap: 6px; border-color: #ffd600; color: #ffd600; padding: 10px 18px"
+              >↗ HALAMAN PENUH</a
+            >
+            <button class="cyber-btn btn-leader" id="btn-close-leaderboard">KEMBALI</button>
+            <button class="cyber-btn" id="btn-reset-leaderboard" style="border-color: rgba(255, 23, 68, 0.6); color: #ff5252; background: rgba(255, 23, 68, 0.1)">RESET LOKAL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MISSION DEBRIEFING / GAME OVER OVERLAY -->
+      <div id="gameover-overlay" class="overlay hidden">
+        <div class="modal" style="max-width: 540px">
+          <h1 id="debrief-title" style="color: #00e5ff; font-size: 26px; letter-spacing: 3px; margin-bottom: 12px; font-weight: 800">LAPORAN MISI</h1>
+          <div style="background: rgba(5, 15, 35, 0.7); border: 1.2px solid rgba(0, 229, 255, 0.4); border-radius: 8px; padding: 16px; margin-bottom: 16px">
+            <p id="debrief-pilot" style="font-size: 14px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px">PILOT: KOMANDAN</p>
+            <p id="debrief-sector" style="font-size: 13px; color: #ffd600; margin-bottom: 8px; letter-spacing: 1px">SEKTOR: ORBIT BUMI</p>
+            <p id="debrief-galon" style="font-size: 22px; font-weight: 800; color: #00e5ff; margin-bottom: 6px; letter-spacing: 1px">GALON DIAMANKAN: 0</p>
+            <p id="debrief-score" style="font-size: 16px; font-weight: 700; color: #ffea00; letter-spacing: 1px; margin-bottom: 8px">TOTAL SKOR: 0</p>
+            <div id="debrief-rank-badge" style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; padding: 8px; border-radius: 6px; background: rgba(0, 229, 255, 0.12); border: 1px dashed rgba(0, 229, 255, 0.4)">
+              MEMPROSES POSISI LEADERBOARD...
+            </div>
+          </div>
+          <div class="button-bar" style="justify-content: center; gap: 10px; flex-wrap: wrap">
+            <button class="cyber-btn btn-launch" id="btn-restart">LUNCURKAN KEMBALI</button>
+            <button class="cyber-btn btn-leader" id="btn-debrief-leaderboard">🏆 LIHAT LEADERBOARD</button>
+            <button class="cyber-btn btn-guide" id="btn-to-hangar">KEMBALI KE DOK</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GUIDE MODAL -->
+      <div id="guide-overlay" class="overlay hidden">
+        <div class="modal">
+          <div class="modal-title">PANDUAN OPERASI & KONTROL TERBANG</div>
+          <div style="text-align: left; font-size: 13px; line-height: 1.8; color: #cfd8dc; margin-bottom: 20px">
+            <p><b style="color: #00e5ff">W / S (atau PANAH ATAS / BAWAH):</b> Dorongan Throttle Vektor & Pengereman Mundur.</p>
+            <p><b style="color: #00e5ff">A / D (atau PANAH KIRI / KANAN):</b> Manuver Guling Aerodinamis 3D & Belok Lateral.</p>
+            <p><b style="color: #00e5ff">SPASI / TOMBOL TEMBAK:</b> Tembakkan Meriam Laser Ganda (dapat menangkis proyektil plasma musuh!).</p>
+            <p><b style="color: #ffd600">GALON KOSMIK:</b> Kumpulkan galon mineral terapung untuk mengisi daya Warp Drive dan pindah sektor.</p>
+            <p><b style="color: #ff5722">ASTEROID KOSMIK:</b> Hindari atau hancurkan bongkahan meteor sebelum menabrak badan pesawat.</p>
+            <p><b style="color: #ff1744">PENCEGAT ALIEN:</b> UFO musuh menembakkan plasma mematikan — lakukan manuver menghindar atau tembak jatuh!</p>
+            <p><b style="color: #d500f9">DREADNOUGHT SEKTOR 05:</b> Hancurkan Kapal Induk Alien raksasa yang dipersenjatai baterai plasma ganda.</p>
+          </div>
+          <button class="cyber-btn btn-guide" id="btn-close-guide">PAHAMI PETUNJUK</button>
+        </div>
+      </div>
+
+      <!-- PILOT REGISTRATION MODAL -->
+      <div id="pilot-modal-overlay" class="overlay hidden">
+        <div class="modal pilot-input-modal">
+          <div class="modal-title">REGISTRASI IDENTITAS PILOT</div>
+          <p style="font-size: 13px; color: #b0bec5; margin-bottom: 20px; line-height: 1.6">Otorisasi penerbangan diperlukan. Masukkan nama atau callsign pilot sebelum meluncurkan operasi tempur antariksa.</p>
+          <div class="pilot-form-group">
+            <label for="modal-pilot-input" style="display: block; font-size: 12px; font-weight: 700; color: #00e5ff; letter-spacing: 1.5px; margin-bottom: 8px"> NAMA / CALLSIGN PILOT: </label>
+            <input type="text" id="modal-pilot-input" class="cyber-input" placeholder="CONTOH: FALCON, BIMA, VIPER..." maxlength="14" spellcheck="false" autocomplete="off" />
+            <div id="pilot-input-error" class="input-error-msg hidden">⚠ NAMA PILOT WAJIB DIISI SEBELUM PENERBANGAN!</div>
+          </div>
+          <div class="button-bar" style="margin-top: 24px; justify-content: center">
+            <button class="cyber-btn btn-launch" id="btn-confirm-pilot">LUNCURKAN OPERASI</button>
+            <button class="cyber-btn btn-guide" id="btn-cancel-pilot">BATAL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /**
+       * STAR INVADER 3D - TACTICAL AEROSPACE SIMULATION
+       * Engine: Hardware-Accelerated Three.js WebGL
+       */
+
+      // --- 1. WEB AUDIO SYNTHESIZER ---
+      let audioCtx = null;
+      let musicEnabled = true;
+
+      function initAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          startBGM();
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+      }
+
+      function playLaserSound() {
+        if (!audioCtx || !musicEnabled) return;
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(950, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.12);
+          gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.13);
+        } catch (e) {}
+      }
+
+      function playGalonSound() {
+        if (!audioCtx || !musicEnabled) return;
+        try {
+          const notes = [523.25, 659.25, 783.99, 1046.5];
+          notes.forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.04);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime + idx * 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.04 + 0.18);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(audioCtx.currentTime + idx * 0.04);
+            osc.stop(audioCtx.currentTime + idx * 0.04 + 0.2);
+          });
+        } catch (e) {}
+      }
+
+      function playHitSound() {
+        if (!audioCtx || !musicEnabled) return;
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(35, audioCtx.currentTime + 0.3);
+          gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.31);
+        } catch (e) {}
+      }
+
+      function playExplosionSound() {
+        if (!audioCtx || !musicEnabled) return;
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(160, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(25, audioCtx.currentTime + 0.45);
+          gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.46);
+        } catch (e) {}
+      }
+
+      function playEnemyPlasmaSound() {
+        if (!audioCtx || !musicEnabled) return;
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "square";
+          osc.frequency.setValueAtTime(460, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.22);
+          gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.23);
+        } catch (e) {}
+      }
+
+      function playWarpSound() {
+        if (!audioCtx || !musicEnabled) return;
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1400, audioCtx.currentTime + 0.85);
+          gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.85);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.88);
+        } catch (e) {}
+      }
+
+      function playClickSound() {
+        if (!audioCtx || !musicEnabled) return;
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.04);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.05);
+        } catch (e) {}
+      }
+
+      function startBGM() {
+        if (!audioCtx || !musicEnabled) return;
+        const bassline = [65.41, 65.41, 77.78, 87.31, 98.0, 87.31, 77.78, 65.41];
+        let step = 0;
+        setInterval(() => {
+          if (!musicEnabled || !audioCtx || audioCtx.state !== "running") return;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(bassline[step % bassline.length], audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.035, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.2);
+          step++;
+        }, 220);
+      }
+
+      // --- 2. GAME DATA & CONFIGURATION ---
+      const SHIP_TYPES = [
+        {
+          name: "FALCON X-1",
+          desc: "Pesawat tempur taktis dengan sayap inverted-gull, bodi komposit titanium anti-radar, dan pendorong plasma tri-vektor.",
+          speed: 1.15,
+          handling: 0.12,
+          magnet: 4.5,
+          hullColor: 0x1f2937,
+          accentColor: 0x00e5ff,
+          glowColor: 0x00e5ff,
+          speedPct: "88%",
+          handlePct: "85%",
+          magnetPct: "40%",
+        },
+        {
+          name: "VALKYRIE V-2",
+          desc: "Kapal penjelajah serbu berat dengan pelindung ganda titanium bertulang dan obor fusi berdaya tinggi untuk ketahanan maksimal.",
+          speed: 0.95,
+          handling: 0.09,
+          magnet: 5.4,
+          hullColor: 0x2d2417,
+          accentColor: 0xffb300,
+          glowColor: 0xff9100,
+          speedPct: "72%",
+          handlePct: "70%",
+          magnetPct: "65%",
+        },
+        {
+          name: "QUANTUM PHANTOM",
+          desc: "Rangka pemburu siluman sayap maju berbahan komposit karbon matte dengan propulsi plasma antimateri ganda eksperimental.",
+          speed: 1.25,
+          handling: 0.14,
+          magnet: 6.8,
+          hullColor: 0x171022,
+          accentColor: 0xd500f9,
+          glowColor: 0xe040fb,
+          speedPct: "95%",
+          handlePct: "92%",
+          magnetPct: "85%",
+        },
+      ];
+
+      const SECTORS = [
+        { name: "SEKTOR 01: ORBIT BUMI", target: 8, enemySpeed: 38 },
+        { name: "SEKTOR 02: NGAI MARS", target: 12, enemySpeed: 44 },
+        { name: "SEKTOR 03: SABUK ASTEROID", target: 16, enemySpeed: 50 },
+        { name: "SEKTOR 04: BADAI JUPITER", target: 20, enemySpeed: 56 },
+        { name: "SEKTOR 05: PALUNG DREADNOUGHT", target: 25, enemySpeed: 64 },
+      ];
+
+      let selectedShipIdx = 0;
+      let currentPilot = "";
+      let selectedDrone = "MAGNET";
+      let currentSectorIdx = 0;
+      let health = 3;
+      let score = 0;
+      let levelGalons = 0;
+      let totalGalons = 0;
+      let inGame = false;
+      let inWarp = false;
+      let warpTimer = 0;
+      let invulnerableTimer = 0;
+      let fireCooldown = 0;
+
+      // Input State
+      const keys = { a: false, d: false, w: false, s: false, space: false };
+
+      window.addEventListener("keydown", (e) => {
+        initAudio();
+        if (e.code === "KeyA" || e.code === "ArrowLeft") keys.a = true;
+        if (e.code === "KeyD" || e.code === "ArrowRight") keys.d = true;
+        if (e.code === "KeyW" || e.code === "ArrowUp") keys.w = true;
+        if (e.code === "KeyS" || e.code === "ArrowDown") keys.s = true;
+        if (e.code === "Space") {
+          keys.space = true;
+          e.preventDefault();
+        }
+      });
+
+      window.addEventListener("keyup", (e) => {
+        if (e.code === "KeyA" || e.code === "ArrowLeft") keys.a = false;
+        if (e.code === "KeyD" || e.code === "ArrowRight") keys.d = false;
+        if (e.code === "KeyW" || e.code === "ArrowUp") keys.w = false;
+        if (e.code === "KeyS" || e.code === "ArrowDown") keys.s = false;
+        if (e.code === "Space") keys.space = false;
+      });
+
+      // Touch controls binding
+      function bindTouch(id, prop) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const start = (e) => {
+          e.preventDefault();
+          initAudio();
+          keys[prop] = true;
+        };
+        const end = (e) => {
+          e.preventDefault();
+          keys[prop] = false;
+        };
+        el.addEventListener("touchstart", start, { passive: false });
+        el.addEventListener("touchend", end, { passive: false });
+        el.addEventListener("mousedown", start);
+        el.addEventListener("mouseup", end);
+      }
+      bindTouch("btn-left", "a");
+      bindTouch("btn-right", "d");
+      bindTouch("btn-fwd", "w");
+      bindTouch("btn-bwd", "s");
+      bindTouch("btn-fire", "space");
+
+      if ("ontouchstart" in window) {
+        document.getElementById("touch-controls").classList.remove("hidden");
+      }
+
+      // --- 3. PROCEDURAL TEXTURES (HD VOLCANIC PLANET) ---
+      function generateHDVolcanicPlanetTexture() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1024;
+        canvas.height = 512;
+        const ctx = canvas.getContext("2d");
+
+        // 1. Dark Basalt Continental Crust
+        const grad = ctx.createLinearGradient(0, 0, 0, 512);
+        grad.addColorStop(0, "#0a0303");
+        grad.addColorStop(0.5, "#150505");
+        grad.addColorStop(1, "#080202");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1024, 512);
+
+        // 2. High-Definition Magma Rifts & Branching Tectonic Fissures
+        for (let c = 0; c < 48; c++) {
+          let x = Math.random() * 1024;
+          let y = 60 + Math.random() * 380;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          const segments = 6 + Math.floor(Math.random() * 8);
+          for (let s = 0; s < segments; s++) {
+            x += (Math.random() - 0.48) * 75;
+            y += (Math.random() - 0.5) * 35;
+            ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = "#ff1a00";
+          ctx.lineWidth = 3.5;
+          ctx.shadowColor = "#ff5500";
+          ctx.shadowBlur = 10;
+          ctx.stroke();
+
+          ctx.strokeStyle = "#ffcc00";
+          ctx.lineWidth = 1.2;
+          ctx.shadowBlur = 2;
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+
+        // 3. Volcanic Caldera Basins
+        for (let p = 0; p < 18; p++) {
+          const cx = Math.random() * 1024;
+          const cy = 80 + Math.random() * 340;
+          const r = 12 + Math.random() * 26;
+          const rad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+          rad.addColorStop(0, "#ffffbb");
+          rad.addColorStop(0.35, "#ff5500");
+          rad.addColorStop(0.7, "#cc0000");
+          rad.addColorStop(1, "rgba(20, 4, 4, 0)");
+          ctx.fillStyle = rad;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+        return tex;
+      }
+
+      // --- 4. 3D MODELS (PROPORTIONATE & DETAILED) ---
+
+      // 4.1 Player Spacecraft Builder
+      function buildPlayerShipModel(shipConfig) {
+        const group = new THREE.Group();
+
+        const hullMat = new THREE.MeshStandardMaterial({
+          color: shipConfig.hullColor,
+          roughness: 0.35,
+          metalness: 0.85,
+        });
+
+        const accentMat = new THREE.MeshStandardMaterial({
+          color: shipConfig.accentColor,
+          roughness: 0.25,
+          metalness: 0.8,
+          emissive: shipConfig.glowColor,
+          emissiveIntensity: 0.25,
+        });
+
+        const cockpitMat = new THREE.MeshPhysicalMaterial({
+          color: 0x00d4ff,
+          emissive: 0x005588,
+          emissiveIntensity: 0.3,
+          roughness: 0.1,
+          metalness: 0.2,
+          transmission: 0.85,
+          transparent: true,
+          opacity: 0.85,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.1,
+        });
+
+        // Sleek Faceted Fuselage
+        const fuseGeo = new THREE.CylinderGeometry(0.1, 1.2, 5.8, 6);
+        fuseGeo.rotateX(Math.PI / 2);
+        const fuseMesh = new THREE.Mesh(fuseGeo, hullMat);
+        fuseMesh.position.set(0, 0, -0.6);
+        fuseMesh.scale.set(1.35, 0.6, 1.0);
+        group.add(fuseMesh);
+
+        // Spine Upper Deck
+        const spineGeo = new THREE.BoxGeometry(0.75, 0.45, 4.0);
+        const spineMesh = new THREE.Mesh(spineGeo, accentMat);
+        spineMesh.position.set(0, 0.38, -0.2);
+        group.add(spineMesh);
+
+        // Rounded Aerodynamic Cockpit Canopy
+        const canopyGeo = new THREE.SphereGeometry(0.78, 24, 16);
+        canopyGeo.scale(0.75, 0.58, 2.0);
+        const canopyMesh = new THREE.Mesh(canopyGeo, cockpitMat);
+        canopyMesh.position.set(0, 0.46, -0.85);
+        group.add(canopyMesh);
+
+        // INVERTED-GULL WINGS
+        // Left Inner Wing (Slanting downward from fuselage)
+        const leftInnerGeo = new THREE.BoxGeometry(2.4, 0.14, 2.4);
+        const leftInner = new THREE.Mesh(leftInnerGeo, hullMat);
+        leftInner.position.set(-1.7, -0.06, 0.2);
+        leftInner.rotation.set(0.1, -0.15, -0.18);
+        group.add(leftInner);
+
+        // Left Outer Wing (Angled outward and slightly upward at the tip)
+        const leftOuterGeo = new THREE.BoxGeometry(2.6, 0.1, 1.8);
+        const leftOuter = new THREE.Mesh(leftOuterGeo, accentMat);
+        leftOuter.position.set(-3.7, 0.15, 0.5);
+        leftOuter.rotation.set(0.08, -0.1, 0.14);
+        group.add(leftOuter);
+
+        // Left Wingtip Rail & Cannon
+        const leftRailGeo = new THREE.CylinderGeometry(0.09, 0.1, 2.2, 8);
+        leftRailGeo.rotateX(Math.PI / 2);
+        const leftRail = new THREE.Mesh(leftRailGeo, hullMat);
+        leftRail.position.set(-5.0, 0.32, 0.5);
+        group.add(leftRail);
+
+        // Symmetrical Right Wings
+        const rightInner = leftInner.clone();
+        rightInner.position.x = 1.7;
+        rightInner.rotation.z = 0.18;
+        rightInner.rotation.y = 0.15;
+        group.add(rightInner);
+
+        const rightOuter = leftOuter.clone();
+        rightOuter.position.x = 3.7;
+        rightOuter.rotation.z = -0.14;
+        rightOuter.rotation.y = 0.1;
+        group.add(rightOuter);
+
+        const rightRail = leftRail.clone();
+        rightRail.position.x = 5.0;
+        group.add(rightRail);
+
+        // Twin Canted Vertical Stabilizers (Tail Fins)
+        const finGeo = new THREE.BoxGeometry(0.12, 1.3, 1.6);
+        const leftFin = new THREE.Mesh(finGeo, accentMat);
+        leftFin.position.set(-1.3, 0.85, 1.5);
+        leftFin.rotation.set(-0.25, 0, -0.22);
+        group.add(leftFin);
+
+        const rightFin = leftFin.clone();
+        rightFin.position.x = 1.3;
+        rightFin.rotation.z = 0.22;
+        group.add(rightFin);
+
+        // TRIPLE PRECISION NOZZLES
+        const nozzleMat = new THREE.MeshStandardMaterial({
+          color: 0x1a222d,
+          roughness: 0.35,
+          metalness: 0.9,
+        });
+
+        const innerNozzleMat = new THREE.MeshBasicMaterial({
+          color: shipConfig.glowColor,
+        });
+
+        function createNozzle(r1, r2, h, x, y, z) {
+          const nozGroup = new THREE.Group();
+          const nGeo = new THREE.CylinderGeometry(r1, r2, h, 16, 1, true);
+          nGeo.rotateX(Math.PI / 2);
+          const mesh = new THREE.Mesh(nGeo, nozzleMat);
+          nozGroup.add(mesh);
+
+          const capGeo = new THREE.CircleGeometry(r1 * 0.9, 16);
+          const cap = new THREE.Mesh(capGeo, innerNozzleMat);
+          cap.position.z = -h * 0.45;
+          nozGroup.add(cap);
+
+          nozGroup.position.set(x, y, z);
+          return nozGroup;
+        }
+
+        const centerNozzle = createNozzle(0.62, 0.78, 1.3, 0, 0, 2.3);
+        const leftNozzle = createNozzle(0.42, 0.56, 1.1, -1.05, 0.1, 2.1);
+        const rightNozzle = createNozzle(0.42, 0.56, 1.1, 1.05, 0.1, 2.1);
+        group.add(centerNozzle);
+        group.add(leftNozzle);
+        group.add(rightNozzle);
+
+        // TRIPLE HIGH-VELOCITY PLASMA TORCHES
+        const flameMat = new THREE.MeshBasicMaterial({
+          color: shipConfig.glowColor,
+          transparent: true,
+          opacity: 0.85,
+          blending: THREE.AdditiveBlending,
+        });
+
+        const coreFlameMat = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.95,
+          blending: THREE.AdditiveBlending,
+        });
+
+        function createPlasmaJet(r, len) {
+          const jGroup = new THREE.Group();
+          const fGeo = new THREE.ConeGeometry(r, len, 16, 1, true);
+          fGeo.rotateX(-Math.PI / 2);
+          fGeo.translate(0, 0, len / 2);
+          const outer = new THREE.Mesh(fGeo, flameMat);
+          jGroup.add(outer);
+
+          const cGeo = new THREE.ConeGeometry(r * 0.45, len * 0.75, 16, 1, true);
+          cGeo.rotateX(-Math.PI / 2);
+          cGeo.translate(0, 0, (len * 0.75) / 2);
+          const core = new THREE.Mesh(cGeo, coreFlameMat);
+          jGroup.add(core);
+
+          return jGroup;
+        }
+
+        const cFlame = createPlasmaJet(0.55, 3.4);
+        cFlame.position.set(0, 0, 2.9);
+        group.add(cFlame);
+
+        const lFlame = createPlasmaJet(0.38, 2.4);
+        lFlame.position.set(-1.05, 0.1, 2.6);
+        group.add(lFlame);
+
+        const rFlame = createPlasmaJet(0.38, 2.4);
+        rFlame.position.set(1.05, 0.1, 2.6);
+        group.add(rFlame);
+
+        const engineLight = new THREE.PointLight(shipConfig.glowColor, 2.2, 14);
+        engineLight.position.set(0, 0, 3.0);
+        group.add(engineLight);
+
+        const shieldGeo = new THREE.SphereGeometry(4.8, 18, 14);
+        const shieldMat = new THREE.MeshBasicMaterial({
+          color: 0x00e5ff,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.0,
+        });
+        const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+        group.add(shieldMesh);
+
+        return {
+          mesh: group,
+          centerFlame: cFlame,
+          leftFlame: lFlame,
+          rightFlame: rFlame,
+          engineLight: engineLight,
+          shieldMesh: shieldMesh,
+        };
+      }
+
+      // 4.2 Proportionate Alien UFO Interceptor
+      function buildUfoModel() {
+        const group = new THREE.Group();
+
+        const saucerMat = new THREE.MeshStandardMaterial({
+          color: 0x1c2128,
+          metalness: 0.88,
+          roughness: 0.25,
+        });
+
+        const domeMat = new THREE.MeshPhysicalMaterial({
+          color: 0xd500f9,
+          emissive: 0x9900cc,
+          emissiveIntensity: 0.75,
+          roughness: 0.15,
+          transparent: true,
+          opacity: 0.85,
+        });
+
+        // Sleek Disc Hull (Diameter ~2.6 units)
+        const discGeo = new THREE.CylinderGeometry(1.3, 1.3, 0.26, 24);
+        const disc = new THREE.Mesh(discGeo, saucerMat);
+        group.add(disc);
+
+        const topConeGeo = new THREE.CylinderGeometry(0.85, 1.3, 0.3, 24);
+        const topCone = new THREE.Mesh(topConeGeo, saucerMat);
+        topCone.position.y = 0.25;
+        group.add(topCone);
+
+        // Faceted Command Dome
+        const domeGeo = new THREE.SphereGeometry(0.72, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.48);
+        const dome = new THREE.Mesh(domeGeo, domeMat);
+        dome.position.y = 0.38;
+        group.add(dome);
+
+        const coreGeo = new THREE.SphereGeometry(0.35, 12, 8);
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        core.position.y = 0.48;
+        group.add(core);
+
+        // 6 Perimeter LED Nodes
+        const ledRingGroup = new THREE.Group();
+        const ledMat1 = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
+        const ledMat2 = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+        for (let i = 0; i < 6; i++) {
+          const ang = (i * Math.PI * 2) / 6;
+          const ledGeo = new THREE.SphereGeometry(0.12, 8, 8);
+          const led = new THREE.Mesh(ledGeo, i % 2 === 0 ? ledMat1 : ledMat2);
+          led.position.set(Math.cos(ang) * 1.25, 0, Math.sin(ang) * 1.25);
+          ledRingGroup.add(led);
+        }
+        group.add(ledRingGroup);
+
+        return {
+          mesh: group,
+          ledRing: ledRingGroup,
+          core: core,
+        };
+      }
+
+      // 4.3 High-Definition Cosmic Hydro Canister (19L Mineral Water Gallon)
+      let regularGalonLabelTex = null;
+      let goldenGalonLabelTex = null;
+
+      function getGalonLabelTexture(isGolden) {
+        if (isGolden && goldenGalonLabelTex) return goldenGalonLabelTex;
+        if (!isGolden && regularGalonLabelTex) return regularGalonLabelTex;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 256;
+        const ctx = canvas.getContext("2d");
+
+        // 1. Shimmering Background Foil
+        const grad = ctx.createLinearGradient(0, 0, 512, 0);
+        if (isGolden) {
+          grad.addColorStop(0, "#e65100");
+          grad.addColorStop(0.2, "#ffb300");
+          grad.addColorStop(0.5, "#fff9c4");
+          grad.addColorStop(0.8, "#ffb300");
+          grad.addColorStop(1, "#e65100");
+        } else {
+          grad.addColorStop(0, "#01579b");
+          grad.addColorStop(0.25, "#0288d1");
+          grad.addColorStop(0.5, "#b3e5fc");
+          grad.addColorStop(0.75, "#0288d1");
+          grad.addColorStop(1, "#01579b");
+        }
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 15, 512, 226);
+
+        // 2. High-Tech Hexagonal Grid Lines
+        ctx.strokeStyle = isGolden ? "rgba(255, 255, 255, 0.28)" : "rgba(255, 255, 255, 0.32)";
+        ctx.lineWidth = 1.2;
+        for (let x = 0; x < 512; x += 32) {
+          ctx.beginPath();
+          ctx.moveTo(x, 15);
+          ctx.lineTo(x + 16, 241);
+          ctx.stroke();
+        }
+
+        // 3. Crisp Foil Outer Borders
+        ctx.strokeStyle = isGolden ? "#ffffff" : "#e1f5fe";
+        ctx.lineWidth = 5;
+        ctx.strokeRect(12, 22, 488, 212);
+
+        ctx.strokeStyle = isGolden ? "#ffd54f" : "#80d8ff";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(18, 28, 476, 200);
+
+        // 4. Iconic Water Bottle Typography
+        ctx.fillStyle = isGolden ? "#3e2723" : "#002171";
+        ctx.font = '900 38px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = "center";
+        ctx.shadowColor = isGolden ? "#ffffff" : "#80d8ff";
+        ctx.shadowBlur = 10;
+        ctx.fillText(isGolden ? "★ HIDRO EMAS LANGKA ★" : "💧 AQUA NOVA", 256, 95);
+
+        ctx.fillStyle = isGolden ? "#5d4037" : "#01579b";
+        ctx.font = '800 20px "Segoe UI", Arial, sans-serif';
+        ctx.shadowBlur = 0;
+        ctx.fillText("AIR MINERAL MURNI KOSMIK // 19L", 256, 138);
+
+        // Quality Grade & Decorative Elements
+        ctx.fillStyle = isGolden ? "#827717" : "#00838f";
+        ctx.font = "700 13px monospace";
+        ctx.fillText("PANEN SEKTOR • MUTU KELAS-A", 256, 172);
+
+        // Faux Barcode
+        for (let b = 180; b <= 332; b += 6) {
+          ctx.fillStyle = b % 12 === 0 ? "transparent" : isGolden ? "#3e2723" : "#002171";
+          ctx.fillRect(b, 188, 3, 24);
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+
+        if (isGolden) goldenGalonLabelTex = tex;
+        else regularGalonLabelTex = tex;
+
+        return tex;
+      }
+
+      function buildGalonModel(isGolden) {
+        const group = new THREE.Group();
+
+        // 1. Ultra-HD Clear Polycarbonate Bottle Material
+        const bottleMat = new THREE.MeshPhysicalMaterial({
+          color: isGolden ? 0xffd54f : 0x4fc3f7,
+          emissive: isGolden ? 0xff8f00 : 0x0277bd,
+          emissiveIntensity: 0.35,
+          roughness: 0.08,
+          metalness: isGolden ? 0.75 : 0.08,
+          transparent: true,
+          opacity: 0.88,
+          transmission: 0.72,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.05,
+        });
+
+        // 2. Liquid Material (Glow from inside)
+        const liquidMat = new THREE.MeshStandardMaterial({
+          color: isGolden ? 0xffea00 : 0x00e5ff,
+          emissive: isGolden ? 0xff6f00 : 0x0091ea,
+          emissiveIntensity: 0.65,
+          roughness: 0.15,
+          metalness: 0.2,
+          transparent: true,
+          opacity: 0.88,
+        });
+
+        // 3. Sanitized Red Cap & Seal
+        const capMat = new THREE.MeshStandardMaterial({
+          color: 0xff1744,
+          roughness: 0.25,
+          metalness: 0.2,
+          emissive: 0x88001b,
+          emissiveIntensity: 0.25,
+        });
+
+        // 4. Main Body (Polycarbonate Cylinder)
+        const bodyGeo = new THREE.CylinderGeometry(0.72, 0.72, 1.7, 32);
+        const body = new THREE.Mesh(bodyGeo, bottleMat);
+        group.add(body);
+
+        // Bottom Base & Bevel
+        const baseBevelGeo = new THREE.CylinderGeometry(0.72, 0.62, 0.18, 32);
+        const baseBevel = new THREE.Mesh(baseBevelGeo, bottleMat);
+        baseBevel.position.y = -0.92;
+        group.add(baseBevel);
+
+        const baseCap = new THREE.Mesh(new THREE.CircleGeometry(0.62, 32), bottleMat);
+        baseCap.rotation.x = Math.PI / 2;
+        baseCap.position.y = -1.01;
+        group.add(baseCap);
+
+        // 5. Four Distinct Molded Ribs (Iconic 19L Gallon Rings)
+        const ribYOffsets = [-0.62, -0.28, 0.28, 0.62];
+        for (let ry of ribYOffsets) {
+          const ribGeo = new THREE.TorusGeometry(0.725, 0.038, 8, 32);
+          ribGeo.rotateX(Math.PI / 2);
+          const rib = new THREE.Mesh(ribGeo, bottleMat);
+          rib.position.y = ry;
+          group.add(rib);
+        }
+
+        // 6. Molded Side Carry Handle
+        const handleMat = new THREE.MeshStandardMaterial({
+          color: isGolden ? 0xffb300 : 0x0288d1,
+          roughness: 0.25,
+          metalness: 0.4,
+        });
+        const handleBarGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.65, 12);
+        const handleBar = new THREE.Mesh(handleBarGeo, handleMat);
+        handleBar.position.set(0.84, 0, 0);
+        group.add(handleBar);
+
+        const hTopGeo = new THREE.BoxGeometry(0.2, 0.08, 0.1);
+        const hTop = new THREE.Mesh(hTopGeo, handleMat);
+        hTop.position.set(0.75, 0.32, 0);
+        group.add(hTop);
+
+        const hBot = hTop.clone();
+        hBot.position.y = -0.32;
+        group.add(hBot);
+
+        // 7. Tapered Shoulder & Neck Dome
+        const shoulderGeo = new THREE.CylinderGeometry(0.34, 0.72, 0.45, 32);
+        const shoulder = new THREE.Mesh(shoulderGeo, bottleMat);
+        shoulder.position.y = 1.05;
+        group.add(shoulder);
+
+        // Neck Collar Rim
+        const neckGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.32, 24);
+        const neck = new THREE.Mesh(neckGeo, bottleMat);
+        neck.position.y = 1.4;
+        group.add(neck);
+
+        const collarRimGeo = new THREE.TorusGeometry(0.33, 0.035, 8, 24);
+        collarRimGeo.rotateX(Math.PI / 2);
+        const collarRim = new THREE.Mesh(collarRimGeo, bottleMat);
+        collarRim.position.y = 1.48;
+        group.add(collarRim);
+
+        // 8. Sanitized Red Cap (Tutup Galon Higienis)
+        const capGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.22, 24);
+        const cap = new THREE.Mesh(capGeo, capMat);
+        cap.position.y = 1.65;
+        group.add(cap);
+
+        const capRimGeo = new THREE.TorusGeometry(0.36, 0.025, 8, 24);
+        capRimGeo.rotateX(Math.PI / 2);
+        const capRim = new THREE.Mesh(capRimGeo, capMat);
+        capRim.position.y = 1.76;
+        group.add(capRim);
+
+        // Pull-tab on cap
+        const pullTab = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.04), capMat);
+        pullTab.position.set(0.36, 1.62, 0);
+        group.add(pullTab);
+
+        // 9. Inner Glowing Cosmic Water (Cairan Mineral Berkristal)
+        const liquidGeo = new THREE.CylinderGeometry(0.67, 0.67, 1.62, 24);
+        const liquidMesh = new THREE.Mesh(liquidGeo, liquidMat);
+        group.add(liquidMesh);
+
+        // 10. HD Holographic Branding Label
+        const labelTex = getGalonLabelTexture(isGolden);
+        const labelMat = new THREE.MeshBasicMaterial({
+          map: labelTex,
+          transparent: true,
+          opacity: 0.96,
+        });
+        const labelGeo = new THREE.CylinderGeometry(0.728, 0.728, 0.58, 32, 1, true);
+        const label = new THREE.Mesh(labelGeo, labelMat);
+        label.position.y = 0;
+        group.add(label);
+
+        // 11. Brilliant Beacon Light & Dual Orbit Halos
+        const beaconLight = new THREE.PointLight(isGolden ? 0xffea00 : 0x00e5ff, 2.8, 14);
+        beaconLight.position.set(0, 0.2, 0);
+        group.add(beaconLight);
+
+        // Halo Ring 1
+        const haloMat1 = new THREE.MeshBasicMaterial({
+          color: isGolden ? 0xffea00 : 0x00e5ff,
+          transparent: true,
+          opacity: 0.85,
+          blending: THREE.AdditiveBlending,
+        });
+        const haloGeo1 = new THREE.TorusGeometry(1.25, 0.026, 8, 32);
+        haloGeo1.rotateX(Math.PI / 2.3);
+        const halo1 = new THREE.Mesh(haloGeo1, haloMat1);
+        group.add(halo1);
+
+        // Halo Ring 2 (Counter-tilted)
+        const haloMat2 = new THREE.MeshBasicMaterial({
+          color: isGolden ? 0xff8f00 : 0x80d8ff,
+          transparent: true,
+          opacity: 0.7,
+          blending: THREE.AdditiveBlending,
+        });
+        const haloGeo2 = new THREE.TorusGeometry(1.4, 0.02, 8, 32);
+        haloGeo2.rotateX(-Math.PI / 2.5);
+        haloGeo2.rotateY(0.4);
+        const halo2 = new THREE.Mesh(haloGeo2, haloMat2);
+        group.add(halo2);
+
+        return {
+          mesh: group,
+          halo1: halo1,
+          halo2: halo2,
+          liquid: liquidMesh,
+        };
+      }
+
+      // 4.4 Volumetric Laser Bolt
+      function createLaserMesh() {
+        const lGroup = new THREE.Group();
+        const lGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.8, 8);
+        lGeo.rotateX(Math.PI / 2);
+
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const core = new THREE.Mesh(lGeo, coreMat);
+        lGroup.add(core);
+
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: 0x00e5ff,
+          transparent: true,
+          opacity: 0.85,
+          blending: THREE.AdditiveBlending,
+        });
+        const glowGeo = new THREE.CylinderGeometry(0.18, 0.18, 2.8, 8);
+        glowGeo.rotateX(Math.PI / 2);
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        lGroup.add(glow);
+
+        return lGroup;
+      }
+
+      // --- 5. MAIN THREE.JS 3D SCENE & ENGINE ---
+      const webglCanvas = document.getElementById("webglCanvas");
+      const hudCanvas = document.getElementById("hudCanvas");
+      const hudCtx = hudCanvas.getContext("2d");
+
+      let renderer, scene, camera;
+      let planetMesh, planetAtmosphere, starPoints;
+      let playerShipObj = null;
+      let tacticalGrid;
+
+      const activeLasers = [];
+      const activeUfos = [];
+      const activeGalons = [];
+      const activeAsteroids = [];
+      const activeEnemyPlasmas = [];
+      const activeExplosions = [];
+      let bossMothership = null;
+
+      let playerPos = { x: 0, y: 0, z: 0 };
+      let playerRoll = 0;
+      let playerPitch = 0;
+
+      function getViewportDimensions() {
+        return {
+          width: window.innerWidth || document.documentElement.clientWidth || 1280,
+          height: window.innerHeight || document.documentElement.clientHeight || 720,
+        };
+      }
+
+      function handleResize() {
+        const { width, height } = getViewportDimensions();
+        if (camera && renderer) {
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(width, height);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        }
+        if (hudCanvas) {
+          hudCanvas.width = width;
+          hudCanvas.height = height;
+        }
+        if (turntableRenderer && turntableCamera) {
+          const tCanvas = document.getElementById("turntableCanvas");
+          if (tCanvas) {
+            const tw = tCanvas.clientWidth || 420;
+            const th = tCanvas.clientHeight || 280;
+            turntableRenderer.setSize(tw, th, false);
+            turntableCamera.aspect = tw / th;
+            turntableCamera.updateProjectionMatrix();
+          }
+        }
+      }
+      window.addEventListener("resize", handleResize);
+
+      function initThreeEngine() {
+        const { width, height } = getViewportDimensions();
+
+        hudCanvas.width = width;
+        hudCanvas.height = height;
+
+        renderer = new THREE.WebGLRenderer({
+          canvas: webglCanvas,
+          antialias: true,
+          powerPreference: "high-performance",
+        });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x02050f, 0.0028);
+
+        camera = new THREE.PerspectiveCamera(72, width / height, 0.1, 1000);
+        camera.position.set(0, 3.4, 8.5);
+
+        const ambientLight = new THREE.AmbientLight(0x223348, 1.2);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        sunLight.position.set(20, 40, -10);
+        scene.add(sunLight);
+
+        const volcanicRimLight = new THREE.DirectionalLight(0xff3d00, 1.2);
+        volcanicRimLight.position.set(0, -20, -100);
+        scene.add(volcanicRimLight);
+
+        // 1. Cinematic Horizon Volcanic Magma Planet
+        const planetTex = generateHDVolcanicPlanetTexture();
+        const planetGeo = new THREE.SphereGeometry(170, 48, 48);
+        const planetMat = new THREE.MeshStandardMaterial({
+          map: planetTex,
+          roughness: 0.8,
+          metalness: 0.2,
+          emissive: 0x441100,
+          emissiveIntensity: 0.5,
+        });
+        planetMesh = new THREE.Mesh(planetGeo, planetMat);
+        planetMesh.position.set(0, -48, -360);
+        scene.add(planetMesh);
+
+        const atmosGeo = new THREE.SphereGeometry(174, 32, 32);
+        const atmosMat = new THREE.MeshBasicMaterial({
+          color: 0xff4400,
+          transparent: true,
+          opacity: 0.22,
+          blending: THREE.AdditiveBlending,
+          side: THREE.BackSide,
+        });
+        planetAtmosphere = new THREE.Mesh(atmosGeo, atmosMat);
+        planetMesh.add(planetAtmosphere);
+
+        // 2. Crystal-Clear Pinpoint Deep Space Stars (NO blurry blobs)
+        const starCount = 1400;
+        const starPositions = new Float32Array(starCount * 3);
+        const starColors = new Float32Array(starCount * 3);
+        const colorPalette = [new THREE.Color(0xa0e0ff), new THREE.Color(0xffe082), new THREE.Color(0xffffff), new THREE.Color(0x80d8ff)];
+
+        for (let i = 0; i < starCount; i++) {
+          starPositions[i * 3] = (Math.random() - 0.5) * 600;
+          starPositions[i * 3 + 1] = (Math.random() - 0.5) * 400;
+          starPositions[i * 3 + 2] = -Math.random() * 550 - 150;
+
+          const c = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+          starColors[i * 3] = c.r;
+          starColors[i * 3 + 1] = c.g;
+          starColors[i * 3 + 2] = c.b;
+        }
+
+        const starGeo = new THREE.BufferGeometry();
+        starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+        starGeo.setAttribute("color", new THREE.BufferAttribute(starColors, 3));
+
+        const starMat = new THREE.PointsMaterial({
+          size: 1.0,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.85,
+          sizeAttenuation: false,
+        });
+        starPoints = new THREE.Points(starGeo, starMat);
+        scene.add(starPoints);
+
+        // 3. Tactical Ground Grid
+        tacticalGrid = new THREE.GridHelper(260, 52, 0x00e5ff, 0x002244);
+        tacticalGrid.position.set(0, -9.5, -40);
+        scene.add(tacticalGrid);
+
+        // 4. Instantiate Player Spacecraft
+        rebuildPlayerShip();
+      }
+
+      function rebuildPlayerShip() {
+        if (playerShipObj) {
+          scene.remove(playerShipObj.mesh);
+        }
+        const shipConfig = SHIP_TYPES[selectedShipIdx];
+        playerShipObj = buildPlayerShipModel(shipConfig);
+        scene.add(playerShipObj.mesh);
+      }
+
+      // --- 6. HANGAR TURNTABLE 3D DOCK PREVIEW ---
+      let turntableRenderer, turntableScene, turntableCamera, turntableShipObj;
+
+      function initTurntableEngine() {
+        const canvas = document.getElementById("turntableCanvas");
+        const tw = canvas.clientWidth || 420;
+        const th = canvas.clientHeight || 280;
+
+        turntableRenderer = new THREE.WebGLRenderer({
+          canvas: canvas,
+          antialias: true,
+          alpha: true,
+        });
+        turntableRenderer.setSize(tw, th, false);
+        turntableRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        turntableScene = new THREE.Scene();
+        turntableCamera = new THREE.PerspectiveCamera(46, tw / th, 0.1, 100);
+        turntableCamera.position.set(0, 3.8, 9.5);
+        turntableCamera.lookAt(0, 0.1, 0);
+
+        const amb = new THREE.AmbientLight(0x446688, 1.4);
+        turntableScene.add(amb);
+
+        const spot = new THREE.SpotLight(0x00e5ff, 3.5, 30, Math.PI / 4, 0.5);
+        spot.position.set(5, 12, 8);
+        turntableScene.add(spot);
+
+        const backSpot = new THREE.DirectionalLight(0xff3d00, 1.2);
+        backSpot.position.set(-6, -4, -6);
+        turntableScene.add(backSpot);
+
+        const platGeo = new THREE.CylinderGeometry(5.2, 5.5, 0.3, 32);
+        const platMat = new THREE.MeshStandardMaterial({
+          color: 0x0a1628,
+          metalness: 0.8,
+          roughness: 0.2,
+        });
+        const platform = new THREE.Mesh(platGeo, platMat);
+        platform.position.y = -1.5;
+        turntableScene.add(platform);
+
+        const platRingGeo = new THREE.TorusGeometry(5.2, 0.08, 8, 32);
+        platRingGeo.rotateX(Math.PI / 2);
+        const platRing = new THREE.Mesh(platRingGeo, new THREE.MeshBasicMaterial({ color: 0x00e5ff }));
+        platRing.position.y = -1.34;
+        turntableScene.add(platRing);
+
+        updateTurntableShip();
+      }
+
+      function updateTurntableShip() {
+        if (turntableShipObj) {
+          turntableScene.remove(turntableShipObj.mesh);
+        }
+        const shipConfig = SHIP_TYPES[selectedShipIdx];
+        turntableShipObj = buildPlayerShipModel(shipConfig);
+        turntableShipObj.mesh.position.set(0, -0.4, 0);
+        turntableScene.add(turntableShipObj.mesh);
+
+        document.getElementById("ship-name").innerText = shipConfig.name;
+        document.getElementById("ship-desc").innerText = shipConfig.desc;
+        document.getElementById("speed-bar").style.width = shipConfig.speedPct;
+        document.getElementById("speed-val").innerText = shipConfig.speedPct;
+        document.getElementById("handle-bar").style.width = shipConfig.handlePct;
+        document.getElementById("handle-val").innerText = shipConfig.handlePct;
+        document.getElementById("magnet-bar").style.width = shipConfig.magnetPct;
+        document.getElementById("magnet-val").innerText = shipConfig.magnetPct;
+      }
+
+      // --- 7. GAMEPLAY ACTIONS & ENTITIES ---
+      function spawnLaser() {
+        if (!inGame || health <= 0) return;
+        playLaserSound();
+
+        const leftLaser = createLaserMesh();
+        leftLaser.position.set(playerPos.x - 3.7, playerPos.y + 0.3, playerPos.z - 1.2);
+        scene.add(leftLaser);
+        activeLasers.push({ mesh: leftLaser, zSpeed: -190 });
+
+        const rightLaser = createLaserMesh();
+        rightLaser.position.set(playerPos.x + 3.7, playerPos.y + 0.3, playerPos.z - 1.2);
+        scene.add(rightLaser);
+        activeLasers.push({ mesh: rightLaser, zSpeed: -190 });
+      }
+
+      function spawnUfo() {
+        const ufo = buildUfoModel();
+        const x = (Math.random() - 0.5) * 28;
+        const y = (Math.random() - 0.5) * 8;
+        const z = -220 - Math.random() * 40;
+        ufo.mesh.position.set(x, y, z);
+        scene.add(ufo.mesh);
+
+        activeUfos.push({
+          ...ufo,
+          baseX: x,
+          baseY: y,
+          timeOffset: Math.random() * 10,
+          speedZ: SECTORS[currentSectorIdx].enemySpeed,
+          shootCooldown: 1.0 + Math.random() * 2.0,
+        });
+      }
+
+      function spawnGalon() {
+        const isGolden = Math.random() < 0.22;
+        const gal = buildGalonModel(isGolden);
+        const x = (Math.random() - 0.5) * 24;
+        const y = (Math.random() - 0.5) * 7;
+        const z = -200 - Math.random() * 30;
+        gal.mesh.position.set(x, y, z);
+        scene.add(gal.mesh);
+
+        activeGalons.push({
+          ...gal,
+          isGolden: isGolden,
+          baseX: x,
+          baseY: y,
+          timeOffset: Math.random() * 10,
+          speedZ: 32,
+        });
+      }
+
+      // 7.1 Asteroid 3D Space Hazard
+      function buildAsteroidModel(scale = 1.0) {
+        const geo = new THREE.DodecahedronGeometry(1.6 * scale, 1);
+        const pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const vx = pos.getX(i);
+          const vy = pos.getY(i);
+          const vz = pos.getZ(i);
+          const noise = 0.78 + Math.random() * 0.44;
+          pos.setXYZ(i, vx * noise, vy * noise, vz * noise);
+        }
+        geo.computeVertexNormals();
+
+        const mat = new THREE.MeshStandardMaterial({
+          color: scale > 1.2 ? 0x4e342e : 0x546e7a,
+          roughness: 0.95,
+          metalness: 0.15,
+          flatShading: true,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        return { mesh, radius: 1.6 * scale };
+      }
+
+      function spawnAsteroid() {
+        const isLarge = Math.random() < 0.35;
+        const scale = isLarge ? 1.7 : 1.0;
+        const ast = buildAsteroidModel(scale);
+        const x = (Math.random() - 0.5) * 32;
+        const y = (Math.random() - 0.5) * 9;
+        const z = -230 - Math.random() * 40;
+        ast.mesh.position.set(x, y, z);
+        scene.add(ast.mesh);
+
+        activeAsteroids.push({
+          mesh: ast.mesh,
+          radius: ast.radius,
+          hp: isLarge ? 2 : 1,
+          isLarge: isLarge,
+          speedZ: 38 + Math.random() * 24 + currentSectorIdx * 5,
+          rotVel: new THREE.Vector3((Math.random() - 0.5) * 2.8, (Math.random() - 0.5) * 2.8, (Math.random() - 0.5) * 2.8),
+        });
+      }
+
+      // 7.2 Alien Enemy Plasma Cannon Bolt
+      function createEnemyPlasmaMesh() {
+        const group = new THREE.Group();
+        const coreGeo = new THREE.SphereGeometry(0.38, 12, 12);
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        group.add(core);
+
+        const glowGeo = new THREE.SphereGeometry(0.75, 12, 12);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: 0xff1744,
+          transparent: true,
+          opacity: 0.85,
+          blending: THREE.AdditiveBlending,
+        });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        group.add(glow);
+
+        const haloGeo = new THREE.TorusGeometry(0.85, 0.08, 6, 16);
+        haloGeo.rotateX(Math.PI / 2);
+        const haloMat = new THREE.MeshBasicMaterial({
+          color: 0xff0055,
+          transparent: true,
+          opacity: 0.8,
+          blending: THREE.AdditiveBlending,
+        });
+        const halo = new THREE.Mesh(haloGeo, haloMat);
+        group.add(halo);
+
+        return { group, halo };
+      }
+
+      function spawnEnemyPlasma(fromX, fromY, fromZ) {
+        if (!inGame || health <= 0) return;
+        playEnemyPlasmaSound();
+        const plasma = createEnemyPlasmaMesh();
+        plasma.group.position.set(fromX, fromY, fromZ);
+        scene.add(plasma.group);
+
+        const dx = playerPos.x - fromX;
+        const dy = playerPos.y - fromY;
+        const dz = playerPos.z - fromZ;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+        const speed = 72 + currentSectorIdx * 10;
+
+        activeEnemyPlasmas.push({
+          mesh: plasma.group,
+          halo: plasma.halo,
+          vx: (dx / dist) * speed,
+          vy: (dy / dist) * speed,
+          vz: (dz / dist) * speed,
+        });
+      }
+
+      // 7.3 Sector 5 Boss: Alien Dreadnought Mothership
+      function buildBossMothershipModel() {
+        const group = new THREE.Group();
+
+        const hullMat = new THREE.MeshStandardMaterial({
+          color: 0x141a28,
+          roughness: 0.35,
+          metalness: 0.88,
+        });
+        const accentMat = new THREE.MeshStandardMaterial({
+          color: 0xff1744,
+          emissive: 0x990022,
+          roughness: 0.3,
+          metalness: 0.7,
+        });
+
+        // Massive Dreadnought Hull
+        const centerHullGeo = new THREE.CylinderGeometry(5.2, 8.0, 3.4, 8);
+        centerHullGeo.rotateX(Math.PI / 2);
+        const centerHull = new THREE.Mesh(centerHullGeo, hullMat);
+        group.add(centerHull);
+
+        // Glowing Core Eye
+        const eyeGeo = new THREE.SphereGeometry(1.8, 20, 16);
+        const eye = new THREE.Mesh(eyeGeo, new THREE.MeshBasicMaterial({ color: 0xff0055 }));
+        eye.position.set(0, 0, -1.8);
+        group.add(eye);
+
+        // Twin Heavy Outrigger Wings
+        const wingGeo = new THREE.BoxGeometry(7.2, 0.9, 6.5);
+        const leftWing = new THREE.Mesh(wingGeo, hullMat);
+        leftWing.position.set(-8.5, 0, 0.5);
+        leftWing.rotation.z = -0.15;
+        group.add(leftWing);
+
+        const rightWing = leftWing.clone();
+        rightWing.position.x = 8.5;
+        rightWing.rotation.z = 0.15;
+        group.add(rightWing);
+
+        // Heavy Wingtip Plasma Cannons
+        const cannonGeo = new THREE.CylinderGeometry(0.45, 0.55, 4.2, 8);
+        cannonGeo.rotateX(Math.PI / 2);
+        const lCannon = new THREE.Mesh(cannonGeo, accentMat);
+        lCannon.position.set(-12.0, -0.4, -1.5);
+        group.add(lCannon);
+
+        const rCannon = lCannon.clone();
+        rCannon.position.x = 12.0;
+        group.add(rCannon);
+
+        // Perimeter Threat Lights
+        const threatRing = new THREE.Group();
+        for (let i = 0; i < 8; i++) {
+          const ang = (i * Math.PI * 2) / 8;
+          const led = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff0055 }));
+          led.position.set(Math.cos(ang) * 7.5, Math.sin(ang) * 2.4, 0);
+          threatRing.add(led);
+        }
+        group.add(threatRing);
+
+        group.position.set(0, 3.0, -110);
+        scene.add(group);
+
+        return {
+          mesh: group,
+          eye: eye,
+          threatRing: threatRing,
+          maxHp: 40,
+          hp: 40,
+          attackTimer: 1.4,
+        };
+      }
+
+      function spawnExplosion(pos, color = 0x00e5ff) {
+        playExplosionSound();
+
+        const debrisGroup = new THREE.Group();
+        const pCount = 20;
+        const fragments = [];
+
+        for (let i = 0; i < pCount; i++) {
+          const geo = Math.random() > 0.5 ? new THREE.BoxGeometry(0.25, 0.25, 0.25) : new THREE.TetrahedronGeometry(0.3);
+          const mat = new THREE.MeshBasicMaterial({
+            color: Math.random() > 0.4 ? color : 0xffffff,
+            wireframe: Math.random() > 0.6,
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+          debrisGroup.add(mesh);
+
+          const vel = new THREE.Vector3((Math.random() - 0.5) * 28, (Math.random() - 0.5) * 28, (Math.random() - 0.5) * 28);
+          const rotVel = new THREE.Vector3(Math.random() * 8, Math.random() * 8, Math.random() * 8);
+          fragments.push({ mesh, vel, rotVel });
+        }
+
+        debrisGroup.position.copy(pos);
+        scene.add(debrisGroup);
+
+        const ringGeo = new THREE.RingGeometry(0.4, 0.9, 24);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: color,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.9,
+          blending: THREE.AdditiveBlending,
+        });
+        const shockwave = new THREE.Mesh(ringGeo, ringMat);
+        shockwave.position.copy(pos);
+        scene.add(shockwave);
+
+        activeExplosions.push({
+          group: debrisGroup,
+          fragments: fragments,
+          shockwave: shockwave,
+          life: 0.55,
+          maxLife: 0.55,
+        });
+      }
+
+      function triggerSectorWarp() {
+        inWarp = true;
+        warpTimer = 2.4;
+        playWarpSound();
+        activeGalons.forEach((g) => scene.remove(g.mesh));
+        activeGalons.length = 0;
+        activeUfos.forEach((u) => scene.remove(u.mesh));
+        activeUfos.length = 0;
+        activeAsteroids.forEach((a) => scene.remove(a.mesh));
+        activeAsteroids.length = 0;
+        activeEnemyPlasmas.forEach((p) => scene.remove(p.mesh));
+        activeEnemyPlasmas.length = 0;
+        if (bossMothership) {
+          scene.remove(bossMothership.mesh);
+          bossMothership = null;
+        }
+      }
+
+      function advanceSector() {
+        currentSectorIdx++;
+        levelGalons = 0;
+        if (currentSectorIdx >= SECTORS.length) {
+          showDebrief(true);
+          return;
+        }
+      }
+
+      function takeDamage() {
+        if (invulnerableTimer > 0) return;
+        health--;
+        playHitSound();
+        invulnerableTimer = 1.6;
+
+        if (playerShipObj && playerShipObj.shieldMesh) {
+          playerShipObj.shieldMesh.material.opacity = 0.85;
+        }
+
+        if (health <= 0) {
+          spawnExplosion(playerShipObj.mesh.position, 0xff1744);
+          setTimeout(() => showDebrief(false), 900);
+        }
+      }
+
+      let lastPlayedEntryId = null;
+
+      function showDebrief(isVictory) {
+        inGame = false;
+        document.getElementById("debrief-title").innerText = isVictory ? "MISI SELESAI // KEMENANGAN" : "MISI GAGAL // HANCUR";
+        document.getElementById("debrief-title").style.color = isVictory ? "#ffd600" : "#ff1744";
+        document.getElementById("debrief-pilot").innerText = "PILOT: " + currentPilot + " [" + SHIP_TYPES[selectedShipIdx].name + "]";
+        document.getElementById("debrief-sector").innerText = "SEKTOR: " + SECTORS[Math.min(currentSectorIdx, 4)].name;
+        document.getElementById("debrief-galon").innerText = "GALON DIAMANKAN: " + totalGalons;
+        document.getElementById("debrief-score").innerText = "TOTAL SKOR: " + score;
+
+        const rankInfo = saveToLeaderboard(currentPilot, totalGalons, score);
+        lastPlayedEntryId = rankInfo.entryId;
+
+        const rankBadge = document.getElementById("debrief-rank-badge");
+        if (rankBadge) {
+          if (rankInfo.rank === 1) {
+            rankBadge.innerHTML = '🥇 <span style="color: #ffd600;">LUAR BIASA! REKOR TERTINGGI BARU // PERINGKAT #1</span>';
+          } else if (rankInfo.rank <= 3) {
+            rankBadge.innerHTML = '⭐ <span style="color: #00e5ff;">HEBAT! MASUK TOP 3 // PERINGKAT #' + rankInfo.rank + " DARI " + rankInfo.total + " PILOT</span>";
+          } else if (rankInfo.rank) {
+            rankBadge.innerHTML = '🎖️ <span style="color: #00e676;">SKOR MASUK LEADERBOARD // PERINGKAT #' + rankInfo.rank + " DARI " + rankInfo.total + " PILOT</span>";
+          } else {
+            rankBadge.innerHTML = '📊 <span style="color: #90a4ae;">SKOR SELESAI TERCATAT: ' + score + " POIN</span>";
+          }
+        }
+
+        document.getElementById("gameover-overlay").classList.remove("hidden");
+      }
+
+      // --- 8. HUD 2D OVERLAY RENDERER (CLEAN & PROFESSIONAL) ---
+      function renderHUD() {
+        const w = hudCanvas.width;
+        const h = hudCanvas.height;
+        hudCtx.clearRect(0, 0, w, h);
+        if (!inGame) return;
+
+        const curSec = SECTORS[currentSectorIdx];
+
+        // Sci-Fi Corner Brackets
+        hudCtx.strokeStyle = "rgba(0, 229, 255, 0.35)";
+        hudCtx.lineWidth = 1.6;
+        hudCtx.beginPath();
+        hudCtx.moveTo(25, 65);
+        hudCtx.lineTo(25, 25);
+        hudCtx.lineTo(65, 25);
+        hudCtx.moveTo(w - 65, 25);
+        hudCtx.lineTo(w - 25, 25);
+        hudCtx.lineTo(w - 25, 65);
+        hudCtx.moveTo(25, h - 65);
+        hudCtx.lineTo(25, h - 25);
+        hudCtx.lineTo(65, h - 25);
+        hudCtx.moveTo(w - 65, h - 25);
+        hudCtx.lineTo(w - 25, h - 25);
+        hudCtx.lineTo(w - 25, h - 65);
+        hudCtx.stroke();
+
+        // Top Telemetry Dashboard (Responsive centered)
+        const barW = Math.min(w - 60, 1060);
+        const barX = (w - barW) / 2;
+        const barY = 16;
+        const barH = 54;
+
+        hudCtx.fillStyle = "rgba(3, 10, 26, 0.88)";
+        hudCtx.beginPath();
+        hudCtx.roundRect(barX, barY, barW, barH, 8);
+        hudCtx.fill();
+        hudCtx.strokeStyle = "rgba(0, 229, 255, 0.45)";
+        hudCtx.lineWidth = 1.2;
+        hudCtx.stroke();
+
+        // Module Left: Pilot & Sector
+        hudCtx.fillStyle = "#00e676";
+        hudCtx.beginPath();
+        hudCtx.arc(barX + 22, barY + 18, 4, 0, Math.PI * 2);
+        hudCtx.fill();
+
+        hudCtx.fillStyle = "#80d8ff";
+        hudCtx.font = "700 11px Segoe UI";
+        hudCtx.fillText("SISTEM // " + currentPilot + " [" + SHIP_TYPES[selectedShipIdx].name + "]", barX + 34, barY + 22);
+
+        hudCtx.fillStyle = "#ffd600";
+        hudCtx.font = "800 12px Segoe UI";
+        hudCtx.fillText(curSec.name + " [" + (currentSectorIdx + 1) + "/5]", barX + 22, barY + 40);
+
+        // Separators
+        const sep1 = barX + Math.max(260, barW * 0.28);
+        const sep2 = barX + Math.min(barW - 270, barW * 0.72);
+        hudCtx.strokeStyle = "rgba(0, 229, 255, 0.2)";
+        hudCtx.beginPath();
+        hudCtx.moveTo(sep1, barY + 6);
+        hudCtx.lineTo(sep1, barY + barH - 6);
+        hudCtx.moveTo(sep2, barY + 6);
+        hudCtx.lineTo(sep2, barY + barH - 6);
+        hudCtx.stroke();
+
+        // Module Center: Canisters & Warp Target
+        hudCtx.fillStyle = "#00e5ff";
+        hudCtx.font = "800 16px Segoe UI";
+        hudCtx.fillText("GALON KOSMIK: " + totalGalons, sep1 + 18, barY + 34);
+
+        const progW = Math.min(180, (sep2 - sep1) * 0.45);
+        const progH = 7;
+        const progX = sep2 - progW - 16;
+        const progY = barY + 28;
+        const ratio = Math.min(1.0, levelGalons / curSec.target);
+
+        hudCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        hudCtx.beginPath();
+        hudCtx.roundRect(progX, progY, progW, progH, 3);
+        hudCtx.fill();
+        hudCtx.fillStyle = "#00e676";
+        hudCtx.beginPath();
+        hudCtx.roundRect(progX, progY, progW * ratio, progH, 3);
+        hudCtx.fill();
+
+        hudCtx.fillStyle = "#90a4ae";
+        hudCtx.font = "700 10px Segoe UI";
+        hudCtx.fillText("KAPASITOR WARP: " + levelGalons + "/" + curSec.target + " (" + Math.floor(ratio * 100) + "%)", progX, progY - 5);
+
+        // Module Right: Shield Integrity & Score
+        hudCtx.fillStyle = health === 1 ? "#ff1744" : "#80d8ff";
+        hudCtx.font = "700 11px Segoe UI";
+        hudCtx.fillText("PERISAI:", sep2 + 18, barY + 18);
+
+        for (let i = 0; i < 3; i++) {
+          const cX = sep2 + 18 + i * 24;
+          const cY = barY + 25,
+            cW = 18,
+            cH = 15;
+          if (i < health) {
+            hudCtx.fillStyle = "#00e5ff";
+            hudCtx.beginPath();
+            hudCtx.roundRect(cX, cY, cW, cH, 3);
+            hudCtx.fill();
+            hudCtx.strokeStyle = "#ffffff";
+            hudCtx.lineWidth = 1;
+            hudCtx.stroke();
+          } else {
+            hudCtx.fillStyle = "rgba(30, 35, 45, 0.6)";
+            hudCtx.beginPath();
+            hudCtx.roundRect(cX, cY, cW, cH, 3);
+            hudCtx.fill();
+            hudCtx.strokeStyle = "#ff1744";
+            hudCtx.lineWidth = 1;
+            hudCtx.stroke();
+          }
+        }
+
+        hudCtx.fillStyle = "#ffd600";
+        hudCtx.font = "800 15px Segoe UI";
+        hudCtx.fillText("SKOR: " + score, barX + barW - 120, barY + 34);
+
+        // Boss Dreadnought Mothership Health Bar
+        if (bossMothership && bossMothership.hp > 0) {
+          const bBarW = Math.min(380, w * 0.42);
+          const bBarH = 10;
+          const bBarX = (w - bBarW) / 2;
+          const bBarY = barY + barH + 12;
+
+          hudCtx.fillStyle = "rgba(4, 10, 24, 0.88)";
+          hudCtx.beginPath();
+          hudCtx.roundRect(bBarX - 6, bBarY - 16, bBarW + 12, bBarH + 24, 6);
+          hudCtx.fill();
+          hudCtx.strokeStyle = "rgba(255, 23, 68, 0.7)";
+          hudCtx.lineWidth = 1.2;
+          hudCtx.stroke();
+
+          hudCtx.fillStyle = "#ff1744";
+          hudCtx.font = "800 11px Segoe UI";
+          hudCtx.textAlign = "center";
+          hudCtx.fillText("⚠ KAPAL INDUK DREADNOUGHT ALIEN // HP: " + bossMothership.hp + "/" + bossMothership.maxHp, w / 2, bBarY - 3);
+
+          const bRatio = Math.max(0, bossMothership.hp / bossMothership.maxHp);
+          hudCtx.fillStyle = "rgba(255, 23, 68, 0.2)";
+          hudCtx.beginPath();
+          hudCtx.roundRect(bBarX, bBarY, bBarW, bBarH, 3);
+          hudCtx.fill();
+          hudCtx.fillStyle = "#ff1744";
+          hudCtx.beginPath();
+          hudCtx.roundRect(bBarX, bBarY, bBarW * bRatio, bBarH, 3);
+          hudCtx.fill();
+          hudCtx.textAlign = "start";
+        }
+
+        // Threat Warning Indicator (Incoming Plasma)
+        const threatIncoming = activeEnemyPlasmas.some((p) => p.mesh.position.z > -65 && p.mesh.position.z < playerPos.z + 2.0);
+        if (threatIncoming && Math.floor(performance.now() * 0.008) % 2 === 0) {
+          hudCtx.fillStyle = "#ff1744";
+          hudCtx.font = "800 12px Segoe UI";
+          hudCtx.textAlign = "center";
+          hudCtx.fillText("⚠ PERINGATAN: KUNCIAN PLASMA MUSUH // MENGHINDAR", w / 2, h - 35);
+          hudCtx.textAlign = "start";
+        }
+
+        // Sleek Tactical Aim Reticle
+        const cx = w / 2 + playerPos.x * 14;
+        const cy = h / 2 - 25 - playerPos.y * 10;
+        hudCtx.strokeStyle = "rgba(0, 229, 255, 0.55)";
+        hudCtx.lineWidth = 1.4;
+        hudCtx.beginPath();
+        hudCtx.arc(cx, cy, 18, 0, Math.PI * 2);
+        hudCtx.stroke();
+
+        hudCtx.beginPath();
+        hudCtx.moveTo(cx - 24, cy);
+        hudCtx.lineTo(cx - 8, cy);
+        hudCtx.moveTo(cx + 8, cy);
+        hudCtx.lineTo(cx + 24, cy);
+        hudCtx.moveTo(cx, cy - 24);
+        hudCtx.lineTo(cx, cy - 8);
+        hudCtx.moveTo(cx, cy + 8);
+        hudCtx.lineTo(cx, cy + 24);
+        hudCtx.stroke();
+
+        // Warp Jump Hyperspace Banner
+        if (inWarp) {
+          hudCtx.fillStyle = "rgba(0, 229, 255, 0.12)";
+          hudCtx.fillRect(0, 0, w, h);
+
+          hudCtx.fillStyle = "#ffd600";
+          hudCtx.font = "800 30px Segoe UI";
+          hudCtx.textAlign = "center";
+          hudCtx.shadowColor = "#00e5ff";
+          hudCtx.shadowBlur = 20;
+          hudCtx.fillText("WARP DRIVE AKTIF // MEMASUKI SEKTOR " + (currentSectorIdx + 1), w / 2, h / 2 - 10);
+          hudCtx.shadowBlur = 0;
+          hudCtx.textAlign = "start";
+        }
+
+        // Damage Warning Flash
+        if (invulnerableTimer > 0 && Math.floor(invulnerableTimer * 12) % 2 === 0) {
+          hudCtx.fillStyle = "rgba(255, 23, 68, 0.15)";
+          hudCtx.fillRect(0, 0, w, h);
+        }
+      }
+
+      // --- 9. ANIMATION & GAMEPLAY TICK LOOP ---
+      let lastTime = performance.now();
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const now = performance.now();
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+
+        // Turntable Rotation in Hangar
+        if (turntableShipObj) {
+          turntableShipObj.mesh.rotation.y += 0.012;
+          turntableRenderer.render(turntableScene, turntableCamera);
+        }
+
+        // Horizon Planet Rotation
+        if (planetMesh) {
+          planetMesh.rotation.y += 0.0004;
+          planetMesh.rotation.x += 0.0001;
+        }
+
+        // Ground Grid Motion
+        if (tacticalGrid) {
+          tacticalGrid.position.z = ((tacticalGrid.position.z + (inWarp ? 75 : 28) * dt) % 10) - 40;
+        }
+
+        // Pinpoint Starfield Warp Stretch
+        if (starPoints) {
+          const sPos = starPoints.geometry.attributes.position.array;
+          const sSpeed = (inWarp ? 380 : 18) * dt;
+          for (let i = 0; i < sPos.length / 3; i++) {
+            sPos[i * 3 + 2] += sSpeed;
+            if (sPos[i * 3 + 2] > 20) sPos[i * 3 + 2] = -650;
+          }
+          starPoints.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Gameplay Loop
+        if (inGame && health > 0) {
+          const shipConfig = SHIP_TYPES[selectedShipIdx];
+
+          let targetRoll = 0;
+          let targetPitch = 0;
+
+          if (keys.a) {
+            playerPos.x -= 18.0 * shipConfig.speed * dt;
+            targetRoll = -0.66;
+          }
+          if (keys.d) {
+            playerPos.x += 18.0 * shipConfig.speed * dt;
+            targetRoll = 0.66;
+          }
+          if (keys.w) {
+            playerPos.z -= 15.0 * dt;
+            targetPitch = -0.22;
+          }
+          if (keys.s) {
+            playerPos.z += 12.0 * dt;
+            targetPitch = 0.25;
+          }
+
+          playerPos.x = Math.max(-13.5, Math.min(13.5, playerPos.x));
+          playerPos.z = Math.max(-6.5, Math.min(3.5, playerPos.z));
+
+          playerRoll += (targetRoll - playerRoll) * shipConfig.handling;
+          playerPitch += (targetPitch - playerPitch) * shipConfig.handling;
+
+          if (playerShipObj) {
+            playerShipObj.mesh.position.set(playerPos.x, playerPos.y, playerPos.z);
+            playerShipObj.mesh.rotation.z = playerRoll;
+            playerShipObj.mesh.rotation.x = playerPitch;
+            playerShipObj.mesh.rotation.y = -playerRoll * 0.22;
+
+            const boostFactor = keys.w ? 2.0 : 1.0;
+            const pulse = 1.0 + Math.sin(now * 0.025) * 0.12;
+            playerShipObj.centerFlame.scale.set(pulse, pulse, pulse * boostFactor);
+            playerShipObj.leftFlame.scale.set(pulse, pulse, pulse * boostFactor);
+            playerShipObj.rightFlame.scale.set(pulse, pulse, pulse * boostFactor);
+            playerShipObj.engineLight.intensity = keys.w ? 4.2 : 2.2;
+
+            if (playerShipObj.shieldMesh.material.opacity > 0) {
+              playerShipObj.shieldMesh.material.opacity -= dt * 1.5;
+            }
+          }
+
+          // Camera Tracking with Aerospace Lag
+          camera.position.x += (playerPos.x * 0.58 - camera.position.x) * 0.12;
+          camera.position.y += (playerPos.y * 0.4 + 3.4 - camera.position.y) * 0.12;
+          camera.position.z += (playerPos.z + 8.5 - camera.position.z) * 0.12;
+          camera.rotation.z = playerRoll * 0.16;
+          camera.fov += ((keys.w ? 78 : 72) - camera.fov) * 0.08;
+          camera.updateProjectionMatrix();
+
+          // Weapon Firing
+          fireCooldown -= dt;
+          if (keys.space && fireCooldown <= 0) {
+            spawnLaser();
+            fireCooldown = 0.18;
+          }
+
+          if (invulnerableTimer > 0) invulnerableTimer -= dt;
+
+          if (inWarp) {
+            warpTimer -= dt;
+            if (warpTimer <= 0) {
+              inWarp = false;
+              advanceSector();
+            }
+          } else {
+            if (levelGalons >= SECTORS[currentSectorIdx].target) {
+              triggerSectorWarp();
+            }
+          }
+
+          // Sector 5 Alien Dreadnought Mothership Boss Spawn
+          if (currentSectorIdx === 4 && !bossMothership && !inWarp) {
+            bossMothership = buildBossMothershipModel();
+          }
+
+          if (!inWarp) {
+            if (Math.random() < 0.035) spawnGalon();
+
+            // Dynamic UFO spawn rate increasing per sector
+            const ufoChance = 0.024 + currentSectorIdx * 0.006;
+            if (Math.random() < ufoChance) spawnUfo();
+
+            // Asteroid Space Hazards (Extremely dense in Sector 3: Asteroid Belt!)
+            const astChance = currentSectorIdx === 2 ? 0.052 : 0.016 + currentSectorIdx * 0.007;
+            if (Math.random() < astChance) spawnAsteroid();
+          }
+
+          // Update Lasers
+          for (let i = activeLasers.length - 1; i >= 0; i--) {
+            const l = activeLasers[i];
+            l.mesh.position.z += l.zSpeed * dt;
+            if (l.mesh.position.z < -240) {
+              scene.remove(l.mesh);
+              activeLasers.splice(i, 1);
+            }
+          }
+
+          // Update Hydro Canisters (Smooth 3D Attraction & Reliable Pickup)
+          let magnetRange = shipConfig.magnet;
+          if (selectedDrone === "MAGNET") magnetRange *= 1.4;
+
+          for (let i = activeGalons.length - 1; i >= 0; i--) {
+            const g = activeGalons[i];
+            g.mesh.position.z += g.speedZ * dt;
+            g.mesh.rotation.y += 0.025;
+            if (g.halo1) g.halo1.rotation.z += 0.045;
+            if (g.halo2) {
+              g.halo2.rotation.x += 0.035;
+              g.halo2.rotation.y += 0.04;
+            }
+            if (g.liquid) {
+              g.liquid.scale.y = 1.0 + Math.sin(now * 0.005 + g.timeOffset) * 0.03;
+            }
+            g.mesh.position.y = g.baseY + Math.sin(now * 0.003 + g.timeOffset) * 0.5;
+
+            const dx = playerPos.x - g.mesh.position.x;
+            const dy = playerPos.y - g.mesh.position.y;
+            const dz = playerPos.z - g.mesh.position.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            // Suction: Pull towards player when inside tractor radius
+            if (dist < magnetRange) {
+              g.mesh.position.x += dx * 9.5 * dt;
+              g.mesh.position.y += dy * 9.5 * dt;
+              // Only pull forward along Z if galon is still in front of the ship
+              if (g.mesh.position.z < playerPos.z) {
+                g.mesh.position.z += Math.max(0, dz) * 9.5 * dt;
+              }
+            }
+
+            // Collection Check: Immediate and reliable pickup for HD canister
+            const isCollected = dist < 3.8 || (Math.abs(dx) < 3.8 && Math.abs(dy) < 2.8 && Math.abs(dz) < 3.5) || (g.mesh.position.z >= playerPos.z - 1.2 && Math.abs(dx) < 3.5 && Math.abs(dy) < 2.6);
+
+            if (isCollected) {
+              playGalonSound();
+              totalGalons++;
+              levelGalons++;
+              score += g.isGolden ? 250 : 100;
+              spawnExplosion(g.mesh.position, g.isGolden ? 0xffea00 : 0x00e5ff);
+              scene.remove(g.mesh);
+              activeGalons.splice(i, 1);
+              continue;
+            }
+
+            // If a galon somehow drifted behind the player, ensure it despawns cleanly
+            if (g.mesh.position.z > playerPos.z + 2.0) {
+              // If close horizontally behind ship, award it and despawn
+              if (Math.abs(dx) < 3.2 && Math.abs(dy) < 2.6) {
+                playGalonSound();
+                totalGalons++;
+                levelGalons++;
+                score += g.isGolden ? 250 : 100;
+                spawnExplosion(g.mesh.position, g.isGolden ? 0xffea00 : 0x00e5ff);
+                scene.remove(g.mesh);
+                activeGalons.splice(i, 1);
+                continue;
+              }
+            }
+
+            // Clean up once it passes behind camera viewpoint
+            if (g.mesh.position.z > 7.5) {
+              scene.remove(g.mesh);
+              activeGalons.splice(i, 1);
+            }
+          }
+
+          // Update UFO Hostiles (With Active Plasma Counter-Attacks)
+          for (let i = activeUfos.length - 1; i >= 0; i--) {
+            const u = activeUfos[i];
+            u.mesh.position.z += u.speedZ * dt;
+            u.mesh.position.x = u.baseX + Math.sin(now * 0.0025 + u.timeOffset) * 4.2;
+            u.mesh.position.y = u.baseY + Math.cos(now * 0.003 + u.timeOffset) * 1.4;
+            u.ledRing.rotation.y += 0.06;
+
+            // UFO Active Plasma Fire
+            u.shootCooldown -= dt;
+            const canShootSector = currentSectorIdx >= 1 || Math.random() < 0.2;
+            if (canShootSector && u.shootCooldown <= 0 && u.mesh.position.z > -165 && u.mesh.position.z < -25) {
+              spawnEnemyPlasma(u.mesh.position.x, u.mesh.position.y - 0.2, u.mesh.position.z + 1.2);
+              u.shootCooldown = 2.4 + Math.random() * 2.4 - Math.min(1.2, currentSectorIdx * 0.25);
+            }
+
+            let hitByLaser = false;
+            for (let j = activeLasers.length - 1; j >= 0; j--) {
+              const l = activeLasers[j];
+              const ldx = l.mesh.position.x - u.mesh.position.x;
+              const ldy = l.mesh.position.y - u.mesh.position.y;
+              const ldz = l.mesh.position.z - u.mesh.position.z;
+              if (Math.abs(ldx) < 1.8 && Math.abs(ldy) < 1.4 && Math.abs(ldz) < 3.2) {
+                hitByLaser = true;
+                scene.remove(l.mesh);
+                activeLasers.splice(j, 1);
+                break;
+              }
+            }
+
+            if (hitByLaser) {
+              spawnExplosion(u.mesh.position, 0xd500f9);
+              score += 150;
+              scene.remove(u.mesh);
+              activeUfos.splice(i, 1);
+              continue;
+            }
+
+            const pdx = playerPos.x - u.mesh.position.x;
+            const pdy = playerPos.y - u.mesh.position.y;
+            const pdz = playerPos.z - u.mesh.position.z;
+            if (Math.abs(pdx) < 2.4 && Math.abs(pdy) < 1.4 && Math.abs(pdz) < 2.6) {
+              takeDamage();
+              spawnExplosion(u.mesh.position, 0xff1744);
+              scene.remove(u.mesh);
+              activeUfos.splice(i, 1);
+              continue;
+            }
+
+            if (u.mesh.position.z > 8.0) {
+              scene.remove(u.mesh);
+              activeUfos.splice(i, 1);
+            }
+          }
+
+          // Update Asteroid Space Hazards
+          for (let i = activeAsteroids.length - 1; i >= 0; i--) {
+            const a = activeAsteroids[i];
+            a.mesh.position.z += a.speedZ * dt;
+            a.mesh.rotation.x += a.rotVel.x * dt;
+            a.mesh.rotation.y += a.rotVel.y * dt;
+            a.mesh.rotation.z += a.rotVel.z * dt;
+
+            let hitByLaser = false;
+            for (let j = activeLasers.length - 1; j >= 0; j--) {
+              const l = activeLasers[j];
+              const ldx = l.mesh.position.x - a.mesh.position.x;
+              const ldy = l.mesh.position.y - a.mesh.position.y;
+              const ldz = l.mesh.position.z - a.mesh.position.z;
+              if (Math.abs(ldx) < a.radius * 0.95 && Math.abs(ldy) < a.radius * 0.95 && Math.abs(ldz) < a.radius + 1.5) {
+                hitByLaser = true;
+                scene.remove(l.mesh);
+                activeLasers.splice(j, 1);
+                break;
+              }
+            }
+
+            if (hitByLaser) {
+              a.hp--;
+              if (a.hp <= 0) {
+                spawnExplosion(a.mesh.position, a.isLarge ? 0x8d6e63 : 0x78909c);
+                score += a.isLarge ? 200 : 100;
+                scene.remove(a.mesh);
+                activeAsteroids.splice(i, 1);
+                continue;
+              } else {
+                spawnExplosion(a.mesh.position, 0xffa000);
+              }
+            }
+
+            const pdx = playerPos.x - a.mesh.position.x;
+            const pdy = playerPos.y - a.mesh.position.y;
+            const pdz = playerPos.z - a.mesh.position.z;
+            if (Math.abs(pdx) < a.radius + 1.2 && Math.abs(pdy) < a.radius + 0.8 && Math.abs(pdz) < a.radius + 1.6) {
+              takeDamage();
+              spawnExplosion(a.mesh.position, 0xff5722);
+              scene.remove(a.mesh);
+              activeAsteroids.splice(i, 1);
+              continue;
+            }
+
+            if (a.mesh.position.z > 8.0) {
+              scene.remove(a.mesh);
+              activeAsteroids.splice(i, 1);
+            }
+          }
+
+          // Update Hostile Enemy Plasma Projectiles
+          for (let i = activeEnemyPlasmas.length - 1; i >= 0; i--) {
+            const p = activeEnemyPlasmas[i];
+            p.mesh.position.x += p.vx * dt;
+            p.mesh.position.y += p.vy * dt;
+            p.mesh.position.z += p.vz * dt;
+            p.halo.rotation.z += 0.08;
+
+            // Player lasers can defensively shoot down incoming plasma!
+            let intercepted = false;
+            for (let j = activeLasers.length - 1; j >= 0; j--) {
+              const l = activeLasers[j];
+              const ldx = l.mesh.position.x - p.mesh.position.x;
+              const ldy = l.mesh.position.y - p.mesh.position.y;
+              const ldz = l.mesh.position.z - p.mesh.position.z;
+              if (Math.abs(ldx) < 1.3 && Math.abs(ldy) < 1.1 && Math.abs(ldz) < 2.0) {
+                intercepted = true;
+                scene.remove(l.mesh);
+                activeLasers.splice(j, 1);
+                break;
+              }
+            }
+
+            if (intercepted) {
+              spawnExplosion(p.mesh.position, 0xff9100);
+              score += 50;
+              scene.remove(p.mesh);
+              activeEnemyPlasmas.splice(i, 1);
+              continue;
+            }
+
+            // Check collision with player
+            const pdx = playerPos.x - p.mesh.position.x;
+            const pdy = playerPos.y - p.mesh.position.y;
+            const pdz = playerPos.z - p.mesh.position.z;
+            if (Math.abs(pdx) < 1.8 && Math.abs(pdy) < 1.2 && Math.abs(pdz) < 2.2) {
+              takeDamage();
+              spawnExplosion(p.mesh.position, 0xff1744);
+              scene.remove(p.mesh);
+              activeEnemyPlasmas.splice(i, 1);
+              continue;
+            }
+
+            if (p.mesh.position.z > 8.0 || p.mesh.position.z < -260) {
+              scene.remove(p.mesh);
+              activeEnemyPlasmas.splice(i, 1);
+            }
+          }
+
+          // Update Sector 5 Alien Dreadnought Mothership Boss
+          if (bossMothership && bossMothership.hp > 0) {
+            bossMothership.mesh.position.x = Math.sin(now * 0.0012) * 14.5;
+            bossMothership.mesh.position.y = 2.8 + Math.cos(now * 0.0016) * 2.0;
+            bossMothership.eye.scale.setScalar(1.0 + Math.sin(now * 0.008) * 0.15);
+            bossMothership.threatRing.rotation.z += 0.04;
+
+            bossMothership.attackTimer -= dt;
+            if (bossMothership.attackTimer <= 0) {
+              const bPos = bossMothership.mesh.position;
+              spawnEnemyPlasma(bPos.x - 12.0, bPos.y - 0.4, bPos.z + 2.5);
+              spawnEnemyPlasma(bPos.x + 12.0, bPos.y - 0.4, bPos.z + 2.5);
+              if (bossMothership.hp < 25) {
+                spawnEnemyPlasma(bPos.x, bPos.y, bPos.z + 3.0);
+              }
+              bossMothership.attackTimer = 1.3 + Math.random() * 0.8;
+            }
+
+            // Check if player lasers strike the Boss
+            for (let j = activeLasers.length - 1; j >= 0; j--) {
+              const l = activeLasers[j];
+              const bPos = bossMothership.mesh.position;
+              const ldx = l.mesh.position.x - bPos.x;
+              const ldy = l.mesh.position.y - bPos.y;
+              const ldz = l.mesh.position.z - bPos.z;
+              if (Math.abs(ldx) < 14.0 && Math.abs(ldy) < 3.2 && Math.abs(ldz) < 5.0) {
+                bossMothership.hp--;
+                scene.remove(l.mesh);
+                activeLasers.splice(j, 1);
+                spawnExplosion(l.mesh.position, 0xff0055);
+                score += 80;
+
+                if (bossMothership.hp <= 0) {
+                  for (let k = 0; k < 6; k++) {
+                    setTimeout(() => {
+                      spawnExplosion(
+                        {
+                          x: bPos.x + (Math.random() - 0.5) * 16,
+                          y: bPos.y + (Math.random() - 0.5) * 6,
+                          z: bPos.z + (Math.random() - 0.5) * 4,
+                        },
+                        0xff1744,
+                      );
+                    }, k * 140);
+                  }
+                  score += 5000;
+                  setTimeout(() => {
+                    if (bossMothership) {
+                      scene.remove(bossMothership.mesh);
+                      bossMothership = null;
+                    }
+                    showDebrief(true);
+                  }, 1000);
+                  break;
+                }
+              }
+            }
+          }
+
+          // Update Explosions
+          for (let i = activeExplosions.length - 1; i >= 0; i--) {
+            const exp = activeExplosions[i];
+            exp.life -= dt;
+            const progress = 1.0 - exp.life / exp.maxLife;
+
+            for (let f of exp.fragments) {
+              f.mesh.position.x += f.vel.x * dt;
+              f.mesh.position.y += f.vel.y * dt;
+              f.mesh.position.z += f.vel.z * dt;
+              f.mesh.rotation.x += f.rotVel.x * dt;
+              f.mesh.rotation.y += f.rotVel.y * dt;
+              f.mesh.scale.setScalar(1.0 - progress);
+            }
+
+            exp.shockwave.scale.setScalar(1.0 + progress * 10.0);
+            exp.shockwave.material.opacity = (1.0 - progress) * 0.75;
+
+            if (exp.life <= 0) {
+              scene.remove(exp.group);
+              scene.remove(exp.shockwave);
+              activeExplosions.splice(i, 1);
+            }
+          }
+        }
+
+        renderer.render(scene, camera);
+        renderHUD();
+      }
+
+      // --- 10. LEADERBOARD PERSISTENCE & GOOGLE SHEETS INTEGRATION ---
+      // Masukkan URL Google Apps Script Web App Anda di bawah ini untuk mengaktifkan sinkronisasi ke Spreadsheet
+      const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyeUr3s7ws4lnwJA11xd8go29Zfc_lxoHSri4GMvgRzlpNvWAJi4FSFgqrcJeHCYn1j/exec";
+
+      let cloudLeaderboardData = null;
+      let isLoadingLeaderboard = false;
+
+      function updateLeaderboardStatus(htmlText, color) {
+        const el = document.getElementById("sheets-sync-status");
+        if (el) {
+          el.innerHTML = htmlText;
+          if (color) el.style.color = color;
+        }
+      }
+
+      function syncToGoogleSheets(entry) {
+        if (!GOOGLE_SHEETS_URL) return;
+
+        fetch(GOOGLE_SHEETS_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: entry.name,
+            ship: entry.ship,
+            galons: entry.galons,
+            score: entry.score,
+            date: entry.date,
+          }),
+        })
+          .then(() => {
+            console.log("Data skor berhasil dikirim ke Google Sheets!");
+            // Muat ulang data terbaru dari Spreadsheet setelah jeda singkat
+            setTimeout(() => {
+              fetchLeaderboardFromSheets();
+            }, 1500);
+          })
+          .catch((err) => {
+            console.warn("Gagal menyinkronkan ke Google Sheets:", err);
+          });
+      }
+
+      function loadViaJSONP(url, cb) {
+        const cbName = "jsonp_cb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+        const script = document.createElement("script");
+        let done = false;
+
+        window[cbName] = function (data) {
+          done = true;
+          delete window[cbName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          cb(true, data);
+        };
+
+        script.onerror = function () {
+          if (!done) {
+            delete window[cbName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            cb(false, null);
+          }
+        };
+
+        const separator = url.includes("?") ? "&" : "?";
+        script.src = url + separator + "callback=" + cbName + "&_t=" + Date.now();
+        document.head.appendChild(script);
+
+        setTimeout(() => {
+          if (!done) {
+            delete window[cbName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            cb(false, null);
+          }
+        }, 7000);
+      }
+
+      function handleLeaderboardSuccess(data, callback) {
+        isLoadingLeaderboard = false;
+        if (Array.isArray(data)) {
+          const formatted = data.map((item, idx) => ({
+            id: item.id || "row_" + idx,
+            name: (item.name || item.Callsign || item.Pilot || "PILOT").toString().toUpperCase(),
+            ship: (item.ship || item.Pesawat || "FALCON X-1").toString(),
+            galons: Number(item.galons || item.Galon || 0),
+            score: Number(item.score || item.Skor || 0),
+            date: (item.date || item.Waktu || "-").toString(),
+          }));
+
+          formatted.sort((a, b) => b.score - a.score);
+          cloudLeaderboardData = formatted;
+
+          try {
+            localStorage.setItem("star_invader_3d_scores", JSON.stringify(formatted.slice(0, 25)));
+          } catch (e) {}
+
+          updateLeaderboardStatus('<span class="live-dot" style="background:#00e676;"></span> DATA LIVE GOOGLE SPREADSHEET (' + formatted.length + " PILOT TERCATAT)", "#00e676");
+          renderLeaderboard();
+          if (callback) callback(true, formatted);
+        } else {
+          handleLeaderboardError(new Error("Format data tidak sesuai"), callback);
+        }
+      }
+
+      function handleLeaderboardError(err, callback) {
+        isLoadingLeaderboard = false;
+        console.warn("Gagal mengambil data dari Spreadsheet, menggunakan cache:", err);
+        updateLeaderboardStatus('<span class="live-dot" style="background:#ffb300;"></span> SPREADSHEET TERHUBUNG // MENAMPILKAN DATA TERSIMPAN', "#ffd600");
+        renderLeaderboard();
+        if (callback) callback(false);
+      }
+
+      function fetchLeaderboardFromSheets(callback) {
+        if (!GOOGLE_SHEETS_URL) {
+          updateLeaderboardStatus('<span class="live-dot" style="background:#ffb300;"></span> MENAMPILKAN DATA LOKAL // URL SPREADSHEET BELUM DIISI', "#ffb300");
+          renderLeaderboard();
+          if (callback) callback(false);
+          return;
+        }
+
+        isLoadingLeaderboard = true;
+        updateLeaderboardStatus('<span class="live-dot" style="background:#00e5ff;"></span> MENGAMBIL PERINGKAT DARI GOOGLE SPREADSHEET...', "#00e5ff");
+        renderLeaderboard();
+
+        // 1. Coba fetch standar terlebih dahulu
+        fetch(GOOGLE_SHEETS_URL)
+          .then((res) => {
+            if (!res.ok) throw new Error("HTTP Status " + res.status);
+            return res.json();
+          })
+          .then((data) => {
+            handleLeaderboardSuccess(data, callback);
+          })
+          .catch((fetchErr) => {
+            // 2. Jika fetch diblokir CORS file:///, otomatis coba via JSONP
+            loadViaJSONP(GOOGLE_SHEETS_URL, (jsonpSuccess, jsonData) => {
+              if (jsonpSuccess && Array.isArray(jsonData)) {
+                handleLeaderboardSuccess(jsonData, callback);
+              } else {
+                handleLeaderboardError(fetchErr, callback);
+              }
+            });
+          });
+      }
+
+      function saveToLeaderboard(name, galons, finalScore) {
+        let board = [];
+        try {
+          board = JSON.parse(localStorage.getItem("star_invader_3d_scores") || "[]");
+        } catch (e) {}
+
+        const now = new Date();
+        const formattedDate =
+          now.toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          }) +
+          " " +
+          now.toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+        const entryId = Date.now() + "_" + Math.random().toString(36).substr(2, 4);
+        const newEntry = {
+          id: entryId,
+          name: (name || "PILOT").toUpperCase(),
+          ship: SHIP_TYPES[selectedShipIdx].name,
+          galons: galons,
+          score: finalScore,
+          date: formattedDate,
+        };
+
+        board.push(newEntry);
+        board.sort((a, b) => b.score - a.score);
+        board = board.slice(0, 20);
+
+        try {
+          localStorage.setItem("star_invader_3d_scores", JSON.stringify(board));
+        } catch (e) {}
+
+        // Kirim otomatis ke Google Sheets jika URL telah dikonfigurasi
+        syncToGoogleSheets(newEntry);
+
+        const rankIdx = board.findIndex((item) => item.id === entryId);
+        return {
+          rank: rankIdx !== -1 ? rankIdx + 1 : null,
+          total: board.length,
+          entryId: entryId,
+        };
+      }
+
+      function renderLeaderboard() {
+        let board = cloudLeaderboardData;
+        if (!board || board.length === 0) {
+          try {
+            board = JSON.parse(localStorage.getItem("star_invader_3d_scores") || "[]");
+          } catch (e) {
+            board = [];
+          }
+        }
+
+        const tbody = document.getElementById("leaderboard-body");
+        tbody.innerHTML = "";
+
+        if (isLoadingLeaderboard) {
+          tbody.innerHTML =
+            '<tr><td colspan="6" style="padding: 24px; color: #00e5ff; font-weight: 700;"><span class="live-dot" style="display:inline-block; margin-right:8px;"></span> MENGAMBIL PERINGKAT REAL-TIME DARI GOOGLE SPREADSHEET...</td></tr>';
+          return;
+        }
+
+        if (!board || board.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="padding: 24px; color: #78909c;">BELUM ADA REKOR PENERBANGAN TERCATAT DI SPREADSHEET. SELESAIKAN MISI UNTUK MENDAFTARKAN SKOR!</td></tr>';
+          return;
+        }
+
+        board.forEach((item, idx) => {
+          const isRecent = lastPlayedEntryId && item.id === lastPlayedEntryId;
+          const tr = document.createElement("tr");
+          if (isRecent) {
+            tr.className = "recent-entry-row";
+          }
+
+          let medalBadge = "#" + (idx + 1);
+          let rankColor = "#80d8ff";
+          if (idx === 0) {
+            medalBadge = "🥇 #1";
+            rankColor = "#ffd600";
+          } else if (idx === 1) {
+            medalBadge = "🥈 #2";
+            rankColor = "#e0e0e0";
+          } else if (idx === 2) {
+            medalBadge = "🥉 #3";
+            rankColor = "#ffb74d";
+          }
+
+          tr.innerHTML =
+            '<td style="color: ' +
+            rankColor +
+            '; font-weight: 800; font-size: 13px;">' +
+            medalBadge +
+            (isRecent ? ' <span style="font-size: 10px; color: #00e5ff; letter-spacing: 1px;">[BARU]</span>' : "") +
+            "</td>" +
+            '<td style="color: #ffffff; font-weight: 800; letter-spacing: 1.5px;">' +
+            (item.name || "PILOT") +
+            "</td>" +
+            '<td style="color: #90a4ae; font-size: 11px;">' +
+            (item.ship || "FALCON X-1") +
+            "</td>" +
+            '<td style="color: #00e5ff; font-weight: 700;">' +
+            Number(item.galons || 0) +
+            " 💧</td>" +
+            '<td style="color: #ffd600; font-weight: 800; font-size: 14px;">' +
+            Number(item.score || 0).toLocaleString("id-ID") +
+            "</td>" +
+            '<td style="color: #78909c; font-size: 11px;">' +
+            (item.date || "-") +
+            "</td>";
+          tbody.appendChild(tr);
+        });
+      }
+
+      // --- 11. UI INTERACTIONS & INITIALIZATION ---
+      document.getElementById("prev-ship-btn").addEventListener("click", () => {
+        playClickSound();
+        selectedShipIdx = (selectedShipIdx - 1 + SHIP_TYPES.length) % SHIP_TYPES.length;
+        updateTurntableShip();
+        rebuildPlayerShip();
+      });
+
+      document.getElementById("next-ship-btn").addEventListener("click", () => {
+        playClickSound();
+        selectedShipIdx = (selectedShipIdx + 1) % SHIP_TYPES.length;
+        updateTurntableShip();
+        rebuildPlayerShip();
+      });
+
+      document.querySelectorAll(".drone-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          playClickSound();
+          document.querySelectorAll(".drone-card").forEach((c) => c.classList.remove("selected"));
+          card.classList.add("selected");
+          selectedDrone = card.dataset.drone;
+        });
+      });
+
+      document.getElementById("btn-toggle-audio").addEventListener("click", () => {
+        musicEnabled = !musicEnabled;
+        document.getElementById("btn-toggle-audio").innerText = musicEnabled ? "AUDIO KOMUNIKASI: AKTIF" : "AUDIO KOMUNIKASI: NONAKTIF";
+        if (musicEnabled) initAudio();
+      });
+
+      document.getElementById("btn-open-leaderboard").addEventListener("click", () => {
+        playClickSound();
+        renderLeaderboard();
+        document.getElementById("leaderboard-overlay").classList.remove("hidden");
+        fetchLeaderboardFromSheets();
+      });
+
+      document.getElementById("btn-debrief-leaderboard").addEventListener("click", () => {
+        playClickSound();
+        renderLeaderboard();
+        document.getElementById("leaderboard-overlay").classList.remove("hidden");
+        fetchLeaderboardFromSheets();
+      });
+
+      document.getElementById("btn-refresh-leaderboard").addEventListener("click", () => {
+        playClickSound();
+        fetchLeaderboardFromSheets();
+      });
+
+      document.getElementById("btn-close-leaderboard").addEventListener("click", () => {
+        playClickSound();
+        document.getElementById("leaderboard-overlay").classList.add("hidden");
+      });
+
+      document.getElementById("btn-reset-leaderboard").addEventListener("click", () => {
+        playClickSound();
+        if (confirm("Apakah Anda yakin ingin mengosongkan cache rekor leaderboard lokal? (Data di spreadsheet utama tetap tersimpan)")) {
+          try {
+            localStorage.removeItem("star_invader_3d_scores");
+          } catch (e) {}
+          cloudLeaderboardData = [];
+          lastPlayedEntryId = null;
+          renderLeaderboard();
+        }
+      });
+
+      document.getElementById("btn-open-guide").addEventListener("click", () => {
+        playClickSound();
+        document.getElementById("guide-overlay").classList.remove("hidden");
+      });
+
+      document.getElementById("btn-close-guide").addEventListener("click", () => {
+        playClickSound();
+        document.getElementById("guide-overlay").classList.add("hidden");
+      });
+
+      // Fullscreen Controls
+      function toggleFullscreen() {
+        playClickSound();
+        if (!document.fullscreenElement) {
+          const docEl = document.documentElement;
+          if (docEl.requestFullscreen) {
+            docEl.requestFullscreen();
+          } else if (docEl.webkitRequestFullscreen) {
+            docEl.webkitRequestFullscreen();
+          } else if (docEl.msRequestFullscreen) {
+            docEl.msRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+        }
+      }
+
+      const btnFs = document.getElementById("btn-fullscreen");
+      if (btnFs) btnFs.addEventListener("click", toggleFullscreen);
+
+      const quickFs = document.getElementById("quick-fullscreen-btn");
+      if (quickFs) quickFs.addEventListener("click", toggleFullscreen);
+
+      function toggleLeaderboardModal() {
+        playClickSound();
+        const lb = document.getElementById("leaderboard-overlay");
+        if (lb.classList.contains("hidden")) {
+          renderLeaderboard();
+          lb.classList.remove("hidden");
+          fetchLeaderboardFromSheets();
+        } else {
+          lb.classList.add("hidden");
+        }
+      }
+
+      const quickLb = document.getElementById("quick-leaderboard-btn");
+      if (quickLb) quickLb.addEventListener("click", toggleLeaderboardModal);
+
+      window.addEventListener("keydown", (e) => {
+        if (e.code === "KeyL" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+          toggleLeaderboardModal();
+        }
+      });
+
+      document.addEventListener("fullscreenchange", () => {
+        const isFull = !!document.fullscreenElement;
+        if (btnFs) btnFs.innerText = isFull ? "⛶ KELUAR LAYAR PENUH" : "⛶ LAYAR PENUH";
+        if (quickFs) quickFs.innerText = isFull ? "⛶ KELUAR" : "⛶ LAYAR PENUH";
+        setTimeout(handleResize, 120);
+      });
+
+      function promptPilotName() {
+        playClickSound();
+        const modal = document.getElementById("pilot-modal-overlay");
+        const input = document.getElementById("modal-pilot-input");
+        const err = document.getElementById("pilot-input-error");
+        err.classList.add("hidden");
+        input.classList.remove("shake");
+
+        const hangarVal = document.getElementById("pilot-name").value.trim();
+        input.value = hangarVal || currentPilot || "";
+
+        modal.classList.remove("hidden");
+        setTimeout(() => {
+          input.focus();
+          if (input.value) input.select();
+        }, 60);
+      }
+
+      function confirmPilotNameAndLaunch() {
+        initAudio();
+        const input = document.getElementById("modal-pilot-input");
+        const err = document.getElementById("pilot-input-error");
+        const val = input.value.trim();
+
+        if (!val) {
+          err.classList.remove("hidden");
+          input.classList.remove("shake");
+          void input.offsetWidth;
+          input.classList.add("shake");
+          input.focus();
+          playHitSound();
+          return;
+        }
+
+        currentPilot = val.toUpperCase();
+        document.getElementById("pilot-name").value = currentPilot;
+        try {
+          localStorage.setItem("star_invader_pilot_name", currentPilot);
+        } catch (e) {}
+
+        document.getElementById("pilot-modal-overlay").classList.add("hidden");
+        launchMission();
+      }
+
+      function cancelPilotPrompt() {
+        playClickSound();
+        document.getElementById("pilot-modal-overlay").classList.add("hidden");
+      }
+
+      function launchMission() {
+        initAudio();
+        const pName = document.getElementById("pilot-name").value.trim();
+        if (pName) {
+          currentPilot = pName.toUpperCase();
+        }
+
+        if (!currentPilot) {
+          promptPilotName();
+          return;
+        }
+
+        health = 3;
+        score = 0;
+        totalGalons = 0;
+        levelGalons = 0;
+        currentSectorIdx = 0;
+        inWarp = false;
+        playerPos = { x: 0, y: 0, z: 0 };
+        playerRoll = 0;
+        playerPitch = 0;
+
+        activeLasers.forEach((l) => scene.remove(l.mesh));
+        activeLasers.length = 0;
+        activeUfos.forEach((u) => scene.remove(u.mesh));
+        activeUfos.length = 0;
+        activeGalons.forEach((g) => scene.remove(g.mesh));
+        activeGalons.length = 0;
+        activeAsteroids.forEach((a) => scene.remove(a.mesh));
+        activeAsteroids.length = 0;
+        activeEnemyPlasmas.forEach((p) => scene.remove(p.mesh));
+        activeEnemyPlasmas.length = 0;
+        if (bossMothership) {
+          scene.remove(bossMothership.mesh);
+          bossMothership = null;
+        }
+        activeExplosions.forEach((e) => {
+          scene.remove(e.group);
+          scene.remove(e.shockwave);
+        });
+        activeExplosions.length = 0;
+
+        rebuildPlayerShip();
+        document.getElementById("hangar-overlay").classList.add("hidden");
+        document.getElementById("gameover-overlay").classList.add("hidden");
+        inGame = true;
+      }
+
+      document.getElementById("btn-launch-game").addEventListener("click", promptPilotName);
+      document.getElementById("btn-confirm-pilot").addEventListener("click", confirmPilotNameAndLaunch);
+      document.getElementById("btn-cancel-pilot").addEventListener("click", cancelPilotPrompt);
+
+      document.getElementById("modal-pilot-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          confirmPilotNameAndLaunch();
+        }
+      });
+
+      document.getElementById("pilot-name").addEventListener("input", (e) => {
+        currentPilot = e.target.value.trim().toUpperCase();
+        if (currentPilot) {
+          try {
+            localStorage.setItem("star_invader_pilot_name", currentPilot);
+          } catch (err) {}
+        }
+      });
+
+      document.getElementById("btn-restart").addEventListener("click", () => {
+        if (currentPilot) {
+          launchMission();
+        } else {
+          promptPilotName();
+        }
+      });
+
+      document.getElementById("btn-to-hangar").addEventListener("click", () => {
+        playClickSound();
+        inGame = false;
+        document.getElementById("gameover-overlay").classList.add("hidden");
+        document.getElementById("hangar-overlay").classList.remove("hidden");
+        updateTurntableShip();
+      });
+
+      window.addEventListener("load", () => {
+        initThreeEngine();
+        initTurntableEngine();
+        animate();
+
+        try {
+          const savedPilot = localStorage.getItem("star_invader_pilot_name");
+          if (savedPilot) {
+            currentPilot = savedPilot.toUpperCase();
+            document.getElementById("pilot-name").value = currentPilot;
+          }
+        } catch (e) {}
+
+        // Ambil data peringkat langsung dari Google Sheets di latar belakang
+        fetchLeaderboardFromSheets();
+      });
+    </script>
+  </body>
+</html>

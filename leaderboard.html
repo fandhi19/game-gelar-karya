@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papan Peringkat Armada // Star Invader 3D</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #020714;
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(0, 229, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(213, 0, 249, 0.06) 0%, transparent 50%),
+                linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+            color: #eceff1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 960px;
+            background: rgba(3, 12, 32, 0.85);
+            border: 1.5px solid rgba(0, 229, 255, 0.45);
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), inset 0 0 20px rgba(0, 229, 255, 0.05);
+            backdrop-filter: blur(12px);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1.5px solid rgba(0, 229, 255, 0.3);
+            padding-bottom: 20px;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .title-group h1 {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #ffffff;
+            text-transform: uppercase;
+            text-shadow: 0 0 16px rgba(0, 229, 255, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .title-group p {
+            font-size: 13px;
+            color: #80d8ff;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .cyber-btn {
+            background: rgba(0, 229, 255, 0.12);
+            border: 1.5px solid #00e5ff;
+            color: #00e5ff;
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: 1.5px;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cyber-btn:hover {
+            background: #00e5ff;
+            color: #020817;
+            box-shadow: 0 0 16px rgba(0, 229, 255, 0.7);
+            transform: translateY(-2px);
+        }
+
+        .cyber-btn-launch {
+            background: #00e5ff;
+            color: #020817;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+        }
+
+        .cyber-btn-launch:hover {
+            background: #ffd600;
+            border-color: #ffd600;
+            box-shadow: 0 0 18px rgba(255, 214, 0, 0.7);
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .stat-card {
+            background: rgba(2, 16, 44, 0.65);
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #90a4ae;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 22px;
+            font-weight: 900;
+            color: #ffd600;
+            letter-spacing: 1px;
+        }
+
+        /* Search & Filter Bar */
+        .search-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 240px;
+            background: rgba(2, 10, 28, 0.8);
+            border: 1.4px solid rgba(0, 229, 255, 0.4);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffd600;
+            letter-spacing: 1px;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+
+        .search-input:focus {
+            border-color: #00e5ff;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.4);
+        }
+
+        .search-input::placeholder {
+            color: rgba(144, 164, 174, 0.55);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #00e676;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00e676;
+            box-shadow: 0 0 8px #00e676;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(0.8); }
+        }
+
+        /* Table */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            border-radius: 8px;
+            background: rgba(1, 8, 22, 0.6);
+        }
+
+        .leader-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        .leader-table th {
+            background: rgba(0, 229, 255, 0.14);
+            color: #00e5ff;
+            padding: 12px 16px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            border-bottom: 2px solid rgba(0, 229, 255, 0.4);
+            white-space: nowrap;
+        }
+
+        .leader-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+            color: #cfd8dc;
+            white-space: nowrap;
+        }
+
+        .leader-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
+        .leader-table tbody tr:hover {
+            background: rgba(0, 229, 255, 0.08);
+        }
+
+        .leader-table tbody tr:nth-child(even) {
+            background: rgba(0, 229, 255, 0.02);
+        }
+
+        .rank-1 { color: #ffd600 !important; font-weight: 900; }
+        .rank-2 { color: #eceff1 !important; font-weight: 900; }
+        .rank-3 { color: #ffb74d !important; font-weight: 900; }
+
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #607d8b;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="title-group">
+            <h1>🏆 PAPAN PERINGKAT ARMADA</h1>
+            <p>STAR INVADER 3D // DATA RESMI PENERBANGAN ORBITAL</p>
+        </div>
+        <div class="nav-buttons">
+            <a href="index.html" class="cyber-btn cyber-btn-launch">🚀 KEMBALI KE GAME</a>
+            <button class="cyber-btn" id="btn-refresh">🔄 REFRESH</button>
+        </div>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="label">Total Pilot Terdaftar</div>
+            <div class="value" id="stat-total-pilots">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Rekor Skor Tertinggi</div>
+            <div class="value" id="stat-high-score" style="color: #00e5ff;">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Total Galon Terdokumentasi</div>
+            <div class="value" id="stat-total-galons" style="color: #00e676;">-</div>
+        </div>
+    </div>
+
+    <!-- Search & Sync Status -->
+    <div class="search-bar">
+        <input type="text" id="search-pilot" class="search-input" placeholder="🔍 Cari nama pilot atau callsign..." spellcheck="false">
+        <div class="status-badge" id="sync-status">
+            <span class="live-dot"></span> SINKRONISASI GOOGLE SPREADSHEET AKTIF
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="leader-table">
+            <thead>
+                <tr>
+                    <th>PERINGKAT</th>
+                    <th>CALLSIGN PILOT</th>
+                    <th>PESAWAT</th>
+                    <th>GALON</th>
+                    <th>TOTAL SKOR</th>
+                    <th>WAKTU MISI</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-tbody">
+                <tr>
+                    <td colspan="6" style="padding: 30px; text-align: center; color: #00e5ff; font-weight: 700;">
+                        🔄 Sedang mengambil data peringkat dari Google Spreadsheet...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        UNITED PLANETARY DEFENSE INITIATIVE // ORBITAL TELEMETRY SYSTEM &copy; 2026
+    </div>
+</div>
+
+<script>
+    const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyeUr3s7ws4lnwJA11xd8go29Zfc_lxoHSri4GMvgRzlpNvWAJi4FSFgqrcJeHCYn1j/exec";
+
+    let rawData = [];
+
+    function loadViaJSONP(url, cb) {
+        const cbName = "jsonp_lb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+        const script = document.createElement("script");
+        let done = false;
+
+        window[cbName] = function(data) {
+            done = true;
+            delete window[cbName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            cb(true, data);
+        };
+
+        script.onerror = function() {
+            if (!done) {
+                delete window[cbName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                cb(false, null);
+            }
+        };
+
+        const separator = url.includes("?") ? "&" : "?";
+        script.src = url + separator + "callback=" + cbName + "&_t=" + Date.now();
+        document.head.appendChild(script);
+
+        setTimeout(() => {
+            if (!done) {
+                delete window[cbName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                cb(false, null);
+            }
+        }, 7000);
+    }
+
+    function processLeaderboardData(data) {
+        const statusEl = document.getElementById('sync-status');
+        rawData = data.map((item, idx) => ({
+            name: (item.name || item.Callsign || item.Pilot || "PILOT").toString().toUpperCase(),
+            ship: (item.ship || item.Pesawat || "FALCON X-1").toString(),
+            galons: Number(item.galons || item.Galon || 0),
+            score: Number(item.score || item.Skor || 0),
+            date: (item.date || item.Waktu || "-").toString()
+        }));
+
+        rawData.sort((a, b) => b.score - a.score);
+
+        statusEl.innerHTML = '<span class="live-dot"></span> DATA REAL-TIME GOOGLE SPREADSHEET (' + rawData.length + ' PILOT)';
+        statusEl.style.color = '#00e676';
+
+        try {
+            localStorage.setItem('star_invader_3d_scores', JSON.stringify(rawData.slice(0, 25)));
+        } catch(e) {}
+
+        updateStats();
+        renderTable(rawData);
+    }
+
+    function loadLeaderboard() {
+        const tbody = document.getElementById('leaderboard-tbody');
+        const statusEl = document.getElementById('sync-status');
+        
+        statusEl.innerHTML = '<span class="live-dot" style="background:#00e5ff;"></span> MENGAMBIL DATA DARI GOOGLE SPREADSHEET...';
+        statusEl.style.color = '#00e5ff';
+
+        // 1. Coba fetch langsung
+        fetch(GOOGLE_SHEETS_URL)
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP Status " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data)) {
+                    processLeaderboardData(data);
+                } else {
+                    throw new Error("Format respons tidak valid");
+                }
+            })
+            .catch(fetchErr => {
+                // 2. Jika fetch diblokir CORS file:///, coba via JSONP
+                loadViaJSONP(GOOGLE_SHEETS_URL, (jsonpSuccess, jsonData) => {
+                    if (jsonpSuccess && Array.isArray(jsonData)) {
+                        processLeaderboardData(jsonData);
+                    } else {
+                        console.warn("Gagal via Fetch & JSONP:", fetchErr);
+                        handleLoadFailure(fetchErr);
+                    }
+                });
+            });
+    }
+
+    function handleLoadFailure(err) {
+        const tbody = document.getElementById('leaderboard-tbody');
+        const statusEl = document.getElementById('sync-status');
+
+        // Coba baca dari localStorage sebagai cadangan
+        try {
+            const localData = JSON.parse(localStorage.getItem('star_invader_3d_scores') || '[]');
+            if (localData.length > 0) {
+                rawData = localData;
+                updateStats();
+                renderTable(rawData);
+                statusEl.innerHTML = '💾 Menampilkan data cache lokal terakhir';
+                statusEl.style.color = '#ffd600';
+                return;
+            }
+        } catch(e) {}
+
+        statusEl.innerHTML = '⚠ Google Apps Script Perlu Diperbarui (Versi Baru)';
+        statusEl.style.color = '#ff5252';
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="padding: 24px; text-align: center; color: #ff5252; line-height: 1.8;">
+                    <b>Data di Google Spreadsheet belum terbaca oleh Web App.</b><br>
+                    <span style="color: #b0bec5; font-size: 13px;">
+                        Data baru bisa terbaca jika fungsi <code>doGet(e)</code> di Google Apps Script sudah di-deploy dengan <b>"Versi Baru" (New Version)</b>.<br>
+                        Buka Apps Script &gt; <b>Terapkan (Deploy)</b> &gt; <b>Kelola penerapan (Manage deployments)</b> &gt; <b>Edit</b> &gt; Versi: <b>Versi baru (New version)</b> &gt; <b>Terapkan</b>.
+                    </span>
+                </td>
+            </tr>
+        `;
+    }
+
+    function updateStats() {
+        document.getElementById('stat-total-pilots').innerText = rawData.length;
+        if (rawData.length > 0) {
+            document.getElementById('stat-high-score').innerText = Number(rawData[0].score).toLocaleString('id-ID');
+            const totalGal = rawData.reduce((acc, curr) => acc + (curr.galons || 0), 0);
+            document.getElementById('stat-total-galons').innerText = totalGal.toLocaleString('id-ID');
+        } else {
+            document.getElementById('stat-high-score').innerText = '0';
+            document.getElementById('stat-total-galons').innerText = '0';
+        }
+    }
+
+    function renderTable(list) {
+        const tbody = document.getElementById('leaderboard-tbody');
+        tbody.innerHTML = '';
+
+        if (!list || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding: 24px; text-align: center; color: #90a4ae;">Tidak ada rekor pilot yang ditemukan.</td></tr>';
+            return;
+        }
+
+        list.forEach((item, idx) => {
+            const tr = document.createElement('tr');
+            
+            let rankBadge = '#' + (idx + 1);
+            let rankClass = '';
+            if (idx === 0) { rankBadge = '🥇 #1'; rankClass = 'rank-1'; }
+            else if (idx === 1) { rankBadge = '🥈 #2'; rankClass = 'rank-2'; }
+            else if (idx === 2) { rankBadge = '🥉 #3'; rankClass = 'rank-3'; }
+
+            tr.innerHTML = `
+                <td class="${rankClass}">${rankBadge}</td>
+                <td style="color: #ffffff; font-weight: 800; letter-spacing: 1px;">${escapeHtml(item.name)}</td>
+                <td style="color: #90a4ae; font-size: 12px;">${escapeHtml(item.ship)}</td>
+                <td style="color: #00e5ff; font-weight: 700;">${item.galons} 💧</td>
+                <td style="color: #ffd600; font-weight: 800; font-size: 15px;">${Number(item.score).toLocaleString('id-ID')}</td>
+                <td style="color: #78909c; font-size: 12px;">${escapeHtml(item.date)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Filter Search
+    document.getElementById('search-pilot').addEventListener('input', (e) => {
+        const query = e.target.value.trim().toUpperCase();
+        if (!query) {
+            renderTable(rawData);
+            return;
+        }
+        const filtered = rawData.filter(item => 
+            item.name.toUpperCase().includes(query) || 
+            item.ship.toUpperCase().includes(query)
+        );
+        renderTable(filtered);
+    });
+
+    document.getElementById('btn-refresh').addEventListener('click', loadLeaderboard);
+
+    // Auto-refresh setiap 30 detik
+    setInterval(loadLeaderboard, 30000);
+
+    // Muat saat halaman dibuka
+    window.addEventListener('load', loadLeaderboard);
+</script>
+
+</body>
+</html>
